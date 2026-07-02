@@ -1,0 +1,26 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "client",
+        "special_client",
+        "production",
+        "delivery"
+      ],
+      "default": "client",
+      "description": "User role in the system"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Custom display name set by admin (overrides full_name)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    }
+  }
+}
