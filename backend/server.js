@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -8,12 +10,43 @@ const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const JWT_SECRET = process.env.JWT_SECRET || 'naturalice-dev-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set. Refusing to start with an insecure default.');
+  process.exit(1);
+}
 const now = () => new Date().toISOString();
 
-app.use(cors({ origin: true, credentials: true }));
+// Only allow requests from known frontend origins (prevents random sites from
+// making authenticated requests using a visitor's browser/cookies).
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://natural-ice.vercel.app,https://naturalice.ae,http://localhost:5173')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.set('trust proxy', 1);
+app.use(helmet());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow same-origin/non-browser requests (no Origin header) and any whitelisted origin.
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
+
+// Rate limit brute-force attempts on auth endpoints.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts, please try again later.' },
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // ---------- Helpers ----------
 
