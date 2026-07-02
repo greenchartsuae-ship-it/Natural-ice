@@ -2,8 +2,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "framework": "vite",
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/api/:path*", "destination": "https://natural-ice-to03.onrender.com/api/:path*" },
+    { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }

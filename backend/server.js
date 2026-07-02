@@ -60,7 +60,7 @@ app.post('/api/auth/register', (req, res) => {
     .run(id, email.toLowerCase(), hash, full_name || '', full_name || '', now(), now());
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   const token = sign(user);
-  res.cookie('token', token, { httpOnly: true, sameSite: 'none', secure: true, maxAge: 30 * 24 * 3600 * 1000 });
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 3600 * 1000 });
   res.json(rowToUser(user));
 });
 
@@ -71,7 +71,7 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ error: 'invalid credentials' });
   }
   const token = sign(user);
-  res.cookie('token', token, { httpOnly: true, sameSite: 'none', secure: true, maxAge: 30 * 24 * 3600 * 1000 });
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 3600 * 1000 });
   res.json(rowToUser(user));
 });
 
