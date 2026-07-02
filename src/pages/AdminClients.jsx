@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Users, Mail, Search, Trash2, Pencil, Check, X } from 'lucide-react';
+import { UserPlus, Users, Mail, Search, Trash2, Pencil, Check, X, KeyRound, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -31,11 +31,17 @@ const roleColors = {
 export default function AdminClients() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
   const [inviting, setInviting] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [editingName, setEditingName] = useState(null); // userId
   const [nameValue, setNameValue] = useState('');
+  const [resultOpen, setResultOpen] = useState(false);
+  const [resultInfo, setResultInfo] = useState(null); // { email, password }
+  const [passwordDialogUser, setPasswordDialogUser] = useState(null); // user object
+  const [newPassword, setNewPassword] = useState('');
+  const [settingPassword, setSettingPassword] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: users = [], isLoading } = useQuery({
@@ -81,11 +87,34 @@ export default function AdminClients() {
   const handleInvite = async () => {
     if (!inviteEmail) return;
     setInviting(true);
-    await base44.users.inviteUser(inviteEmail, 'user');
-    toast.success(`Invitation sent to ${inviteEmail}`);
-    setInviteOpen(false);
-    setInviteEmail('');
-    setInviting(false);
+    try {
+      const res = await base44.users.inviteUser(inviteEmail, 'user', invitePassword || undefined);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setInviteOpen(false);
+      setInviteEmail('');
+      setInvitePassword('');
+      setResultInfo({ email: res.email, password: res.temp_password });
+      setResultOpen(true);
+    } catch (e) {
+      toast.error(e.message || 'Failed to create user');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const setPasswordMutation = useMutation({
+    mutationFn: ({ id, password }) => base44.users.setPassword(id, password),
+    onSuccess: (res) => {
+      toast.success(`Password updated for ${res.email}`);
+      setPasswordDialogUser(null);
+      setNewPassword('');
+    },
+    onError: (e) => toast.error(e.message || 'Failed to set password'),
+  });
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard?.writeText(text);
+    toast.success('Copied to clipboard');
   };
 
   const filtered = users.filter(u => {
@@ -188,6 +217,15 @@ export default function AdminClients() {
                       {ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:bg-muted"
+                    title="Set password"
+                    onClick={() => { setPasswordDialogUser(user); setNewPassword(''); }}
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10">
@@ -219,7 +257,7 @@ export default function AdminClients() {
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Invite New User</DialogTitle>
+            <DialogTitle>Create New User</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -231,14 +269,86 @@ export default function AdminClients() {
                 type="email"
               />
             </div>
+            <div>
+              <Label>Password (optional)</Label>
+              <Input
+                value={invitePassword}
+                onChange={e => setInvitePassword(e.target.value)}
+                placeholder="Leave blank to auto-generate"
+                type="text"
+              />
+            </div>
             <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
-              The user will receive an invitation email. Once they register, you can set their role (client, special client, production, delivery, etc.) from this page.
+              Set a password yourself, or leave it blank and we'll generate one for you. Either way, you'll see the final password after creating the account so you can share it with the user directly.
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
             <Button onClick={handleInvite} disabled={!inviteEmail || inviting}>
-              {inviting ? 'Sending...' : 'Send Invitation'}
+              {inviting ? 'Creating...' : 'Create User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resultOpen} onOpenChange={setResultOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>User Created</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Share these login details with the user. You can change the password again anytime using the key icon next to their name.
+            </p>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <div className="flex items-center gap-2">
+                <Input readOnly value={resultInfo?.email || ''} className="font-mono text-sm" />
+                <Button variant="outline" size="icon" onClick={() => copyToClipboard(resultInfo?.email || '')}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <div className="flex items-center gap-2">
+                <Input readOnly value={resultInfo?.password || ''} className="font-mono text-sm" />
+                <Button variant="outline" size="icon" onClick={() => copyToClipboard(resultInfo?.password || '')}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setResultOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!passwordDialogUser} onOpenChange={(open) => !open && setPasswordDialogUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Password for {passwordDialogUser?.display_name || passwordDialogUser?.email}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>New password</Label>
+              <Input
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                type="text"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialogUser(null)}>Cancel</Button>
+            <Button
+              onClick={() => setPasswordMutation.mutate({ id: passwordDialogUser.id, password: newPassword })}
+              disabled={newPassword.length < 6 || setPasswordMutation.isPending}
+            >
+              {setPasswordMutation.isPending ? 'Saving...' : 'Save Password'}
             </Button>
           </DialogFooter>
         </DialogContent>

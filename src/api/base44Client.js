@@ -66,7 +66,8 @@ export const base44 = {
     },
   },
   users: {
-    inviteUser: (email, role) => request('/users/invite', { method: 'POST', body: JSON.stringify({ email, role }) }),
+    inviteUser: (email, role, password) => request('/users/invite', { method: 'POST', body: JSON.stringify({ email, role, password }) }),
+    setPassword: (id, password) => request(`/users/${id}/set-password`, { method: 'POST', body: JSON.stringify({ password }) }),
   },
   functions: {
     invoke: (name, payload) => request(`/functions/${name}`, { method: 'POST', body: JSON.stringify(payload) }),

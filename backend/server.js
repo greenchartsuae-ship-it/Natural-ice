@@ -105,19 +105,30 @@ app.put('/api/auth/me', auth, (req, res) => {
   res.json(rowToUser(user));
 });
 
-// Invite user (admin only) - creates account with a generated temp password
+// Invite user (admin only) - creates account with a chosen or generated password
 app.post('/api/users/invite', auth, requireAdmin, (req, res) => {
-  const { email, role } = req.body;
+  const { email, role, password } = req.body;
   if (!email) return res.status(400).json({ error: 'email required' });
   const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
   if (existing) return res.status(409).json({ error: 'user already exists' });
-  const tempPassword = Math.random().toString(36).slice(-10);
-  const hash = bcrypt.hashSync(tempPassword, 10);
+  const finalPassword = (password && password.length >= 6) ? password : Math.random().toString(36).slice(-10);
+  const hash = bcrypt.hashSync(finalPassword, 10);
   const id = uuidv4();
   db.prepare(`INSERT INTO users (id, email, password_hash, full_name, display_name, role, created_date, updated_date)
     VALUES (?, ?, ?, '', '', ?, ?, ?)`)
     .run(id, email.toLowerCase(), hash, role || 'client', now(), now());
-  res.json({ ok: true, email: email.toLowerCase(), temp_password: tempPassword, role: role || 'client' });
+  res.json({ ok: true, email: email.toLowerCase(), temp_password: finalPassword, role: role || 'client' });
+});
+
+// Set/reset a user's password (admin only)
+app.post('/api/users/:id/set-password', auth, requireAdmin, (req, res) => {
+  const { password } = req.body;
+  if (!password || password.length < 6) return res.status(400).json({ error: 'password must be at least 6 characters' });
+  const target = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+  if (!target) return res.status(404).json({ error: 'user not found' });
+  const hash = bcrypt.hashSync(password, 10);
+  db.prepare('UPDATE users SET password_hash = ?, updated_date = ? WHERE id = ?').run(hash, now(), req.params.id);
+  res.json({ ok: true, email: target.email });
 });
 
 // updateUserName function - mirrors base44 function
