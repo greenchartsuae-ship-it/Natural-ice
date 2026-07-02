@@ -1,0 +1,23 @@
+{
+  "name": "SpecialClientProduct",
+  "type": "object",
+  "properties": {
+    "client_email": {
+      "type": "string",
+      "description": "Email of the special client"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the assigned product"
+    },
+    "special_price": {
+      "type": "number",
+      "description": "Custom price for this client"
+    }
+  },
+  "required": [
+    "client_email",
+    "product_id",
+    "special_price"
+  ]
+}

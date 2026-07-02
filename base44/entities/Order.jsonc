@@ -1,0 +1,126 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "client_email": {
+      "type": "string",
+      "description": "Email of the client who placed the order"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Name of the client"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "preparing",
+        "ready",
+        "collected",
+        "on_the_way",
+        "delivered",
+        "cancelled"
+      ],
+      "default": "pending",
+      "description": "Current order status"
+    },
+    "items": {
+      "type": "array",
+      "description": "Order line items",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Total order amount including tax"
+    },
+    "delivery_address": {
+      "type": "string",
+      "description": "Delivery address"
+    },
+    "delivery_phone": {
+      "type": "string",
+      "description": "Contact phone for delivery"
+    },
+    "delivery_lat": {
+      "type": "number",
+      "description": "Delivery latitude"
+    },
+    "delivery_lng": {
+      "type": "number",
+      "description": "Delivery longitude"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Order notes"
+    },
+    "assigned_driver": {
+      "type": "string",
+      "description": "Email of assigned delivery driver"
+    },
+    "driver_name": {
+      "type": "string",
+      "description": "Driver full name"
+    },
+    "driver_phone": {
+      "type": "string",
+      "description": "Driver phone number"
+    },
+    "driver_location_lat": {
+      "type": "number",
+      "description": "Driver live latitude"
+    },
+    "driver_location_lng": {
+      "type": "number",
+      "description": "Driver live longitude"
+    },
+    "delivery_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Requested delivery date"
+    },
+    "approved_at": {
+      "type": "string"
+    },
+    "preparing_at": {
+      "type": "string"
+    },
+    "ready_at": {
+      "type": "string"
+    },
+    "collected_at": {
+      "type": "string"
+    },
+    "on_the_way_at": {
+      "type": "string"
+    },
+    "delivered_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "client_email",
+    "client_name",
+    "items",
+    "total_amount"
+  ]
+}

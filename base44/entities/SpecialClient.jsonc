@@ -1,0 +1,21 @@
+{
+  "name": "SpecialClient",
+  "type": "object",
+  "properties": {
+    "client_email": {
+      "type": "string",
+      "description": "Email of the special client"
+    },
+    "trn": {
+      "type": "string",
+      "description": "TRN code for this special client"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Company name to display on invoice"
+    }
+  },
+  "required": [
+    "client_email"
+  ]
+}
