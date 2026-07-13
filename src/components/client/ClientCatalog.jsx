@@ -147,8 +147,14 @@ export default function ClientCatalog({ user }) {
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
                 <div className="flex items-center justify-between">
-                  <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
-                  {cart[product.id] ? (
+                  {product.price_on_request ? (
+                    <p className="text-lg font-bold text-amber-600">As per Request</p>
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
+                  )}
+                  {product.price_on_request ? (
+                    <Badge variant="outline" className="text-amber-600 border-amber-300">Contact Admin</Badge>
+                  ) : cart[product.id] ? (
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCart(product.id, -1)}>
                         <Minus className="w-3 h-3" />

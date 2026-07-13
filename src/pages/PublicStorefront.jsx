@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ShoppingCart, Plus, Minus, Package, Search, X, Trash2, LogIn, MapPin, Phone, Mail, Globe, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { computeDeliveryFee, amountUntilFreeDelivery } from '@/lib/deliveryFee';
 
 export default function PublicStorefront() {
   const [cart, setCart] = useState({});
@@ -102,15 +103,17 @@ export default function PublicStorefront() {
       product_id: item.product.id,
       product_name: item.product.name,
       quantity: item.quantity,
-      unit_price: item.product.price,
-      total: item.product.price * item.quantity,
+      unit_price: item.product.price_on_request ? null : item.product.price,
+      total: item.product.price_on_request ? null : item.product.price * item.quantity,
+      price_on_request: !!item.product.price_on_request,
     }));
 
     createOrderMutation.mutate({
       client_email: checkoutData.client_email,
       client_name: checkoutData.client_name,
       items,
-      total_amount: cartTotal,
+      total_amount: grandTotal,
+      delivery_fee: deliveryFee,
       delivery_address: checkoutData.delivery_address,
       delivery_phone: checkoutData.delivery_phone,
       notes: checkoutData.notes,
@@ -143,7 +146,7 @@ export default function PublicStorefront() {
               <Button onClick={() => setOrderOpen(true)} className="gap-2 relative">
                 <ShoppingCart className="w-4 h-4" />
                 Cart ({cartCount})
-                <span className="text-sm font-bold ml-1">AED {cartTotal.toFixed(2)}</span>
+                <span className="text-sm font-bold ml-1">AED {grandTotal.toFixed(2)}</span>
               </Button>
             )}
           </div>
@@ -224,8 +227,16 @@ export default function PublicStorefront() {
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
                   <div className="flex items-center justify-between">
-                    <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
-                    {cart[product.id] ? (
+                    {product.price_on_request ? (
+                      <p className="text-lg font-bold text-amber-600">As per Request</p>
+                    ) : (
+                      <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
+                    )}
+                    {product.price_on_request ? (
+                      <a href="mailto:Info@icenatural.com" className="text-sm font-medium text-primary hover:underline">
+                        Contact Us
+                      </a>
+                    ) : cart[product.id] ? (
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCart(product.id, -1)}>
                           <Minus className="w-3 h-3" />
@@ -267,7 +278,9 @@ export default function PublicStorefront() {
                 <div key={product.id} className="flex items-center gap-4 p-3 bg-muted rounded-lg">
                   <div className="flex-1">
                     <p className="font-semibold">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">AED {product.price}/{product.unit}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {product.price_on_request ? 'As per Request' : `AED ${product.price}/${product.unit}`}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCart(product.id, -1)}>

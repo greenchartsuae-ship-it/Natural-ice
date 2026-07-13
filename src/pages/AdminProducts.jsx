@@ -104,7 +104,7 @@ export default function AdminProducts() {
 
   const openEdit = (product) => {
     setEditing(product);
-    setForm({ ...product });
+    setForm({ ...defaultProduct, ...product });
     setOpen(true);
   };
 
@@ -115,7 +115,12 @@ export default function AdminProducts() {
   };
 
   const handleSave = () => {
-    saveMutation.mutate({ ...form, price: parseFloat(form.price), min_order_quantity: parseInt(form.min_order_quantity) || 1 });
+    saveMutation.mutate({
+      ...form,
+      price: form.price_on_request ? 0 : parseFloat(form.price) || 0,
+      price_on_request: !!form.price_on_request,
+      min_order_quantity: parseInt(form.min_order_quantity) || 1,
+    });
   };
 
   return (
@@ -238,7 +243,11 @@ export default function AdminProducts() {
                 </div>
                 <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{product.description}</p>
                 <div className="flex items-center justify-between mt-4">
-                  <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-sm font-normal text-muted-foreground">/{product.unit}</span></p>
+                  {product.price_on_request ? (
+                    <p className="text-lg font-bold text-amber-600">As per Request</p>
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-sm font-normal text-muted-foreground">/{product.unit}</span></p>
+                  )}
                   <div className="flex gap-1 items-center">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(product)}>
                       <Pencil className="w-4 h-4" />
@@ -291,8 +300,32 @@ export default function AdminProducts() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Price (AED)</Label>
-                <Input type="number" step="0.01" value={form.price} onChange={e => setForm({...form, price: e.target.value})} placeholder="0.00" />
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="mb-0">Price</Label>
+                  <div className="flex rounded-md overflow-hidden border text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setForm({...form, price_on_request: false})}
+                      className={`px-2 py-1 font-medium transition-colors ${!form.price_on_request ? 'bg-primary text-primary-foreground' : 'bg-transparent text-muted-foreground hover:bg-muted'}`}
+                    >
+                      Number
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({...form, price_on_request: true})}
+                      className={`px-2 py-1 font-medium transition-colors border-l ${form.price_on_request ? 'bg-primary text-primary-foreground' : 'bg-transparent text-muted-foreground hover:bg-muted'}`}
+                    >
+                      As per Request
+                    </button>
+                  </div>
+                </div>
+                {form.price_on_request ? (
+                  <div className="h-9 flex items-center px-3 rounded-md border bg-muted text-sm text-amber-600 font-medium">
+                    As per Request
+                  </div>
+                ) : (
+                  <Input type="number" step="0.01" value={form.price} onChange={e => setForm({...form, price: e.target.value})} placeholder="0.00" />
+                )}
               </div>
               <div>
                 <Label>Min Order Qty</Label>

@@ -46,8 +46,9 @@ export default function PrintInvoice({ order, open, onOpenChange }) {
   if (!order) return null;
 
   const subtotal = order.items?.reduce((s, item) => s + (item.total || 0), 0) || 0;
+  const deliveryFee = order.delivery_fee || 0;
   const tax = +(subtotal * TAX_RATE).toFixed(2);
-  const total = order.total_amount || subtotal + tax;
+  const total = order.total_amount || subtotal + tax + deliveryFee;
   const invoiceNumber = order.id?.slice(-6).toUpperCase();
   const invoiceDate = order.created_date ? format(new Date(order.created_date), 'dd MMM yyyy') : '';
 

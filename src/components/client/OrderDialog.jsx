@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { MapPin, Loader2 } from 'lucide-react';
+import { computeDeliveryFee, amountUntilFreeDelivery } from '@/lib/deliveryFee';
 
 const TAX_RATE = 0.05;
 
@@ -20,7 +21,9 @@ export default function OrderDialog({ open, onOpenChange, cartItems, total, onSu
   const [locating, setLocating] = useState(false);
 
   const tax = total * TAX_RATE;
-  const grandTotal = total + tax;
+  const deliveryFee = computeDeliveryFee(total);
+  const remainingForFree = amountUntilFreeDelivery(total);
+  const grandTotal = total + tax + deliveryFee;
 
   const handleLocate = () => {
     if (!navigator.geolocation) return;
@@ -41,7 +44,7 @@ export default function OrderDialog({ open, onOpenChange, cartItems, total, onSu
   };
 
   const handleSubmit = () => {
-    onSubmit({ ...deliveryInfo, total_amount: grandTotal });
+    onSubmit({ ...deliveryInfo, total_amount: grandTotal, delivery_fee: deliveryFee });
   };
 
   return (
@@ -68,9 +71,7 @@ export default function OrderDialog({ open, onOpenChange, cartItems, total, onSu
                     <td className="p-3 font-medium">{item.product.name}</td>
                     <td className="p-3 text-right">{item.quantity}</td>
                     {item.product.price_on_request ? (
-                      <>
-                        <td className="p-3 text-right text-amber-600 font-medium" colSpan={2}>As per Request</td>
-                      </>
+                      <td className="p-3 text-right text-amber-600 font-medium" colSpan={2}>As per Request</td>
                     ) : (
                       <>
                         <td className="p-3 text-right">AED {item.product.price?.toFixed(2)}</td>
@@ -89,6 +90,13 @@ export default function OrderDialog({ open, onOpenChange, cartItems, total, onSu
               <span>Subtotal</span>
               <span>AED {total.toFixed(2)}</span>
             </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Delivery Fee</span>
+              <span>{deliveryFee === 0 ? 'FREE' : `AED ${deliveryFee.toFixed(2)}`}</span>
+            </div>
+            {remainingForFree > 0 && (
+              <p className="text-xs text-orange-600">Add AED {remainingForFree.toFixed(2)} more for free delivery</p>
+            )}
             <div className="flex justify-between text-muted-foreground">
               <span>Tax (5%)</span>
               <span>AED {tax.toFixed(2)}</span>

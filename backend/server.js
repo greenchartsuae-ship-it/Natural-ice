@@ -220,6 +220,9 @@ function deserializeBody(table, body) {
   if (table === 'products' && 'is_active' in out) {
     out.is_active = out.is_active ? 1 : 0;
   }
+  if (table === 'products' && 'price_on_request' in out) {
+    out.price_on_request = out.price_on_request ? 1 : 0;
+  }
   return out;
 }
 
