@@ -36,7 +36,7 @@ const units = [
   { value: 'liter', label: 'Liter' },
 ];
 
-const defaultProduct = { name: '', description: '', category: 'ice_ball', price: '', unit: 'kg', image_url: '', is_active: true, min_order_quantity: 1, sort_order: 0 };
+const defaultProduct = { name: '', description: '', category: 'ice_ball', price: '', unit: 'kg', image_url: '', is_active: true, min_order_quantity: 1, sort_order: 0, price_on_request: false };
 
 export default function AdminProducts() {
   const [open, setOpen] = useState(false);
@@ -187,7 +187,9 @@ export default function AdminProducts() {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold truncate">{product.name}</p>
-                            <p className="text-xs text-muted-foreground capitalize">{product.category?.replace(/_/g, ' ')} · AED {product.price}/{product.unit}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {product.category?.replace(/_/g, ' ')} · {product.price_on_request ? 'As per Request' : `AED ${product.price}/${product.unit}`}
+                            </p>
                           </div>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${product.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                             {product.is_active !== false ? 'Active' : 'Inactive'}

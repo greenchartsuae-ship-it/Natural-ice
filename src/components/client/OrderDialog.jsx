@@ -67,8 +67,16 @@ export default function OrderDialog({ open, onOpenChange, cartItems, total, onSu
                   <tr key={item.product.id}>
                     <td className="p-3 font-medium">{item.product.name}</td>
                     <td className="p-3 text-right">{item.quantity}</td>
-                    <td className="p-3 text-right">AED {item.product.price?.toFixed(2)}</td>
-                    <td className="p-3 text-right font-medium">AED {(item.product.price * item.quantity).toFixed(2)}</td>
+                    {item.product.price_on_request ? (
+                      <>
+                        <td className="p-3 text-right text-amber-600 font-medium" colSpan={2}>As per Request</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="p-3 text-right">AED {item.product.price?.toFixed(2)}</td>
+                        <td className="p-3 text-right font-medium">AED {(item.product.price * item.quantity).toFixed(2)}</td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

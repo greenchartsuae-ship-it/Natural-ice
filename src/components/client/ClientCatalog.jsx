@@ -47,7 +47,7 @@ export default function ClientCatalog({ user }) {
     return product ? { product, quantity: qty } : null;
   }).filter(Boolean);
 
-  const cartTotal = cartItems.reduce((s, item) => s + (item.product.price * item.quantity), 0);
+  const cartTotal = cartItems.reduce((s, item) => s + (item.product.price_on_request ? 0 : item.product.price * item.quantity), 0);
 
   const createOrderMutation = useMutation({
     mutationFn: (orderData) => base44.entities.Order.create(orderData),
@@ -64,8 +64,9 @@ export default function ClientCatalog({ user }) {
       product_id: item.product.id,
       product_name: item.product.name,
       quantity: item.quantity,
-      unit_price: item.product.price,
-      total: item.product.price * item.quantity,
+      unit_price: item.product.price_on_request ? null : item.product.price,
+      total: item.product.price_on_request ? null : item.product.price * item.quantity,
+      price_on_request: !!item.product.price_on_request,
     }));
     createOrderMutation.mutate({
       client_email: user.email,

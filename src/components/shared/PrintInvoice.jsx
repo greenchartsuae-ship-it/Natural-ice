@@ -210,6 +210,16 @@ export default function PrintInvoice({ order, open, onOpenChange }) {
             <tbody>
               {order.items?.map((item, i) => {
                 const itemTax = (item.total || 0) * TAX_RATE;
+                if (item.price_on_request) {
+                  return (
+                    <tr key={i}>
+                      <td style={{ padding: '6px 8px', border: '1px solid #ccc' }}>{i + 1}</td>
+                      <td style={{ padding: '6px 8px', border: '1px solid #ccc' }}>{item.product_name}</td>
+                      <td style={{ padding: '6px 8px', border: '1px solid #ccc', textAlign: 'right' }}>{item.quantity}</td>
+                      <td colSpan={4} style={{ padding: '6px 8px', border: '1px solid #ccc', textAlign: 'right', color: '#b45309', fontWeight: 'bold' }}>As per Request</td>
+                    </tr>
+                  );
+                }
                 return (
                   <tr key={i}>
                     <td style={{ padding: '6px 8px', border: '1px solid #ccc' }}>{i + 1}</td>
@@ -255,6 +265,11 @@ export default function PrintInvoice({ order, open, onOpenChange }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 10px', borderBottom: '1px solid #eee', fontSize: '12px' }}>
                 <span>Standard Rate (5%)</span><span>{tax.toFixed(2)}</span>
               </div>
+              {deliveryFee > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 10px', borderBottom: '1px solid #eee', fontSize: '12px' }}>
+                  <span>Delivery Fee</span><span>{deliveryFee.toFixed(2)}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 10px', background: '#003366', color: 'white', fontWeight: 'bold', fontSize: '13px' }}>
                 <span>Total</span><span>AED {total.toFixed(2)}</span>
               </div>

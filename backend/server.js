@@ -200,6 +200,7 @@ function serializeRow(table, row) {
   }
   if (table === 'products') {
     out.is_active = !!out.is_active;
+    out.price_on_request = !!out.price_on_request;
   }
   (JSON_FIELDS[table] || []).forEach(f => {
     if (out[f]) {

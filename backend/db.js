@@ -79,4 +79,15 @@ CREATE TABLE IF NOT EXISTS special_client_products (
 );
 `);
 
+// ---------- Lightweight migrations for columns added after initial release ----------
+// (SQLite has no "ADD COLUMN IF NOT EXISTS", so we check PRAGMA table_info first.)
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  if (!cols.includes(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+ensureColumn('products', 'price_on_request', 'INTEGER DEFAULT 0');
+ensureColumn('orders', 'delivery_fee', 'REAL DEFAULT 0');
+
 module.exports = db;

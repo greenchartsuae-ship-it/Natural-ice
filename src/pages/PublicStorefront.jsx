@@ -64,7 +64,11 @@ export default function PublicStorefront() {
     return product ? { product, quantity: qty } : null;
   }).filter(Boolean);
 
-  const cartTotal = cartItems.reduce((s, item) => s + (item.product.price * item.quantity), 0);
+  const cartTotal = cartItems.reduce((s, item) => s + (item.product.price_on_request ? 0 : item.product.price * item.quantity), 0);
+  const hasRequestPricedItems = cartItems.some(item => item.product.price_on_request);
+  const deliveryFee = computeDeliveryFee(cartTotal);
+  const remainingForFree = amountUntilFreeDelivery(cartTotal);
+  const grandTotal = cartTotal + deliveryFee;
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -282,10 +286,24 @@ export default function PublicStorefront() {
             )}
           </div>
           {cartItems.length > 0 && (
-            <div className="border-t pt-4 space-y-4">
-              <div className="flex items-center justify-between text-lg font-bold">
+            <div className="border-t pt-4 space-y-2">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Subtotal</span>
+                <span>AED {cartTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Delivery Fee</span>
+                <span>{deliveryFee === 0 ? 'FREE' : `AED ${deliveryFee.toFixed(2)}`}</span>
+              </div>
+              {remainingForFree > 0 && (
+                <p className="text-xs text-orange-600">Add AED {remainingForFree.toFixed(2)} more for free delivery</p>
+              )}
+              {hasRequestPricedItems && (
+                <p className="text-xs text-amber-600">Some items are priced "As per Request" — final total will be confirmed after we contact you.</p>
+              )}
+              <div className="flex items-center justify-between text-lg font-bold pt-2">
                 <span>Total:</span>
-                <span className="text-primary">AED {cartTotal.toFixed(2)}</span>
+                <span className="text-primary">AED {grandTotal.toFixed(2)}</span>
               </div>
               <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setOrderOpen(false)}>
