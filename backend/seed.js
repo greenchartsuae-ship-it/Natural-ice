@@ -23,49 +23,46 @@ function parsePrice(priceText) {
   return { price: parseFloat(m[1]), unit };
 }
 
-function seedAdmin() {
-  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(ADMIN_EMAIL);
+async function seedAdmin() {
+  const existing = await db.get('SELECT * FROM users WHERE email = ?', [ADMIN_EMAIL]);
   if (existing) {
     console.log('Admin already exists:', ADMIN_EMAIL);
     return;
   }
   const hash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
-  db.prepare(`INSERT INTO users (id, email, password_hash, full_name, display_name, role, created_date, updated_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(uuidv4(), ADMIN_EMAIL, hash, 'Administrator', 'Administrator', 'admin', now(), now());
+  await db.run(`INSERT INTO users (id, email, password_hash, full_name, display_name, role, created_date, updated_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [uuidv4(), ADMIN_EMAIL, hash, 'Administrator', 'Administrator', 'admin', now(), now()]);
   console.log('Seeded admin user:', ADMIN_EMAIL, 'password:', ADMIN_PASSWORD);
 }
 
-function seedProducts() {
-  const count = db.prepare('SELECT COUNT(*) c FROM products').get().c;
+async function seedProducts() {
+  const countRow = await db.get('SELECT COUNT(*) c FROM products');
+  const count = parseInt(countRow.c, 10);
   if (count > 0) {
     console.log('Products already seeded:', count);
     return;
   }
   const raw = JSON.parse(fs.readFileSync(path.join(__dirname, 'seed_products.json'), 'utf-8'));
-  const insert = db.prepare(`INSERT INTO products
-    (id, name, description, category, price, unit, image_url, is_active, sort_order, min_order_quantity, created_date, updated_date)
-    VALUES (@id, @name, @description, @category, @price, @unit, @image_url, 1, @sort_order, 1, @created_date, @updated_date)`);
-  const insertMany = db.transaction((items) => {
-    items.forEach((p, i) => {
-      const { price, unit } = parsePrice(p.price_text);
-      insert.run({
-        id: uuidv4(),
-        name: p.name.trim(),
-        description: p.description || '',
-        category: categorySlug(p.category),
-        price,
-        unit,
-        image_url: p.image_url,
-        sort_order: i,
-        created_date: now(),
-        updated_date: now(),
-      });
-    });
-  });
-  insertMany(raw);
+  for (let i = 0; i < raw.length; i++) {
+    const p = raw[i];
+    const { price, unit } = parsePrice(p.price_text);
+    await db.run(`INSERT INTO products
+      (id, name, description, category, price, unit, image_url, is_active, sort_order, min_order_quantity, created_date, updated_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 1, ?, ?)`,
+      [uuidv4(), p.name.trim(), p.description || '', categorySlug(p.category), price, unit, p.image_url, i, now(), now()]);
+  }
   console.log('Seeded', raw.length, 'products');
 }
 
-seedAdmin();
-seedProducts();
+async function main() {
+  await db.init();
+  await seedAdmin();
+  await seedProducts();
+  await db.pool.end();
+}
+
+main().catch((err) => {
+  console.error('Seed failed:', err);
+  process.exit(1);
+});

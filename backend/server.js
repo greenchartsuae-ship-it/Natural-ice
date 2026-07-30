@@ -48,6 +48,12 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+// Wrap async route handlers so rejected promises are forwarded to Express's
+// error handling instead of crashing the request silently.
+function ah(fn) {
+  return (req, res, next) => fn(req, res, next).catch(next);
+}
+
 // ---------- Helpers ----------
 
 function rowToUser(row) {
@@ -60,12 +66,12 @@ function sign(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
 }
 
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'unauthenticated' });
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id);
+    const user = await db.get('SELECT * FROM users WHERE id = ?', [payload.id]);
     if (!user) return res.status(401).json({ error: 'unauthenticated' });
     req.user = user;
     next();
@@ -81,32 +87,32 @@ function requireAdmin(req, res, next) {
 
 // ---------- Auth routes ----------
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', ah(async (req, res) => {
   const { email, password, full_name } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
-  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+  const existing = await db.get('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
   if (existing) return res.status(409).json({ error: 'user already exists' });
   const hash = bcrypt.hashSync(password, 10);
   const id = uuidv4();
-  db.prepare(`INSERT INTO users (id, email, password_hash, full_name, display_name, role, created_date, updated_date)
-    VALUES (?, ?, ?, ?, ?, 'client', ?, ?)`)
-    .run(id, email.toLowerCase(), hash, full_name || '', full_name || '', now(), now());
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  await db.run(`INSERT INTO users (id, email, password_hash, full_name, display_name, role, created_date, updated_date)
+    VALUES (?, ?, ?, ?, ?, 'client', ?, ?)`,
+    [id, email.toLowerCase(), hash, full_name || '', full_name || '', now(), now()]);
+  const user = await db.get('SELECT * FROM users WHERE id = ?', [id]);
   const token = sign(user);
   res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 3600 * 1000 });
   res.json(rowToUser(user));
-});
+}));
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', ah(async (req, res) => {
   const { email, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get((email || '').toLowerCase());
+  const user = await db.get('SELECT * FROM users WHERE email = ?', [(email || '').toLowerCase()]);
   if (!user || !bcrypt.compareSync(password || '', user.password_hash)) {
     return res.status(401).json({ error: 'invalid credentials' });
   }
   const token = sign(user);
   res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 3600 * 1000 });
   res.json(rowToUser(user));
-});
+}));
 
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('token');
@@ -117,7 +123,7 @@ app.get('/api/auth/me', auth, (req, res) => {
   res.json(rowToUser(req.user));
 });
 
-app.put('/api/auth/me', auth, (req, res) => {
+app.put('/api/auth/me', auth, ah(async (req, res) => {
   const fields = req.body || {};
   const allowed = ['full_name', 'display_name', 'phone'];
   const updates = [];
@@ -132,50 +138,51 @@ app.put('/api/auth/me', auth, (req, res) => {
     updates.push('updated_date = ?');
     values.push(now());
     values.push(req.user.id);
-    db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    await db.run(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
   }
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  const user = await db.get('SELECT * FROM users WHERE id = ?', [req.user.id]);
   res.json(rowToUser(user));
-});
+}));
 
 // Invite user (admin only) - creates account with a chosen or generated password
-app.post('/api/users/invite', auth, requireAdmin, (req, res) => {
+app.post('/api/users/invite', auth, requireAdmin, ah(async (req, res) => {
   const { email, role, password } = req.body;
   if (!email) return res.status(400).json({ error: 'email required' });
-  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+  const existing = await db.get('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
   if (existing) return res.status(409).json({ error: 'user already exists' });
   const finalPassword = (password && password.length >= 6) ? password : Math.random().toString(36).slice(-10);
   const hash = bcrypt.hashSync(finalPassword, 10);
   const id = uuidv4();
-  db.prepare(`INSERT INTO users (id, email, password_hash, full_name, display_name, role, created_date, updated_date)
-    VALUES (?, ?, ?, '', '', ?, ?, ?)`)
-    .run(id, email.toLowerCase(), hash, role || 'client', now(), now());
+  await db.run(`INSERT INTO users (id, email, password_hash, full_name, display_name, role, created_date, updated_date)
+    VALUES (?, ?, ?, '', '', ?, ?, ?)`,
+    [id, email.toLowerCase(), hash, role || 'client', now(), now()]);
   res.json({ ok: true, email: email.toLowerCase(), temp_password: finalPassword, role: role || 'client' });
-});
+}));
 
 // Set/reset a user's password (admin only)
-app.post('/api/users/:id/set-password', auth, requireAdmin, (req, res) => {
+app.post('/api/users/:id/set-password', auth, requireAdmin, ah(async (req, res) => {
   const { password } = req.body;
   if (!password || password.length < 6) return res.status(400).json({ error: 'password must be at least 6 characters' });
-  const target = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+  const target = await db.get('SELECT * FROM users WHERE id = ?', [req.params.id]);
   if (!target) return res.status(404).json({ error: 'user not found' });
   const hash = bcrypt.hashSync(password, 10);
-  db.prepare('UPDATE users SET password_hash = ?, updated_date = ? WHERE id = ?').run(hash, now(), req.params.id);
+  await db.run('UPDATE users SET password_hash = ?, updated_date = ? WHERE id = ?', [hash, now(), req.params.id]);
   res.json({ ok: true, email: target.email });
-});
+}));
 
 // updateUserName function - mirrors base44 function
-app.post('/api/functions/updateUserName', auth, requireAdmin, (req, res) => {
+app.post('/api/functions/updateUserName', auth, requireAdmin, ah(async (req, res) => {
   const { userId, display_name } = req.body;
-  db.prepare('UPDATE users SET display_name = ?, updated_date = ? WHERE id = ?').run(display_name, now(), userId);
-  const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  await db.run('UPDATE users SET display_name = ?, updated_date = ? WHERE id = ?', [display_name, now(), userId]);
+  const targetUser = await db.get('SELECT * FROM users WHERE id = ?', [userId]);
   if (targetUser) {
-    const orders = db.prepare('SELECT * FROM orders WHERE client_email = ?').all(targetUser.email);
-    const upd = db.prepare('UPDATE orders SET client_name = ?, updated_date = ? WHERE id = ?');
-    orders.forEach(o => upd.run(display_name, now(), o.id));
+    const orders = await db.all('SELECT * FROM orders WHERE client_email = ?', [targetUser.email]);
+    for (const o of orders) {
+      await db.run('UPDATE orders SET client_name = ?, updated_date = ? WHERE id = ?', [display_name, now(), o.id]);
+    }
   }
   res.json({ ok: true });
-});
+}));
 
 // ---------- Generic entity CRUD ----------
 
@@ -236,7 +243,7 @@ function getTable(entityName, res) {
 }
 
 // List / filter: GET /api/entities/:entity?sort=-created_date&limit=200&filter={"status":"pending"}
-app.get('/api/entities/:entity', auth, (req, res) => {
+app.get('/api/entities/:entity', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
   let sql = `SELECT * FROM ${table}`;
@@ -261,11 +268,11 @@ app.get('/api/entities/:entity', auth, (req, res) => {
   if (req.query.limit) {
     sql += ` LIMIT ${parseInt(req.query.limit, 10)}`;
   }
-  const rows = db.prepare(sql).all(...params);
+  const rows = await db.all(sql, params);
   res.json(rows.map(r => serializeRow(table, r)));
-});
+}));
 
-app.post('/api/entities/:entity', auth, (req, res) => {
+app.post('/api/entities/:entity', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
   const body = deserializeBody(table, req.body || {});
@@ -274,12 +281,12 @@ app.post('/api/entities/:entity', auth, (req, res) => {
   const allCols = ['id', ...cols, 'created_date', 'updated_date'];
   const placeholders = allCols.map(() => '?').join(', ');
   const values = [id, ...cols.map(c => body[c]), now(), now()];
-  db.prepare(`INSERT INTO ${table} (${allCols.join(', ')}) VALUES (${placeholders})`).run(...values);
-  const row = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+  await db.run(`INSERT INTO ${table} (${allCols.join(', ')}) VALUES (${placeholders})`, values);
+  const row = await db.get(`SELECT * FROM ${table} WHERE id = ?`, [id]);
   res.json(serializeRow(table, row));
-});
+}));
 
-app.put('/api/entities/:entity/:id', auth, (req, res) => {
+app.put('/api/entities/:entity/:id', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
   const body = deserializeBody(table, req.body || {});
@@ -287,37 +294,51 @@ app.put('/api/entities/:entity/:id', auth, (req, res) => {
   if (cols.length) {
     const setSql = cols.map(c => `${c} = ?`).join(', ') + ', updated_date = ?';
     const values = [...cols.map(c => body[c]), now(), req.params.id];
-    db.prepare(`UPDATE ${table} SET ${setSql} WHERE id = ?`).run(...values);
+    await db.run(`UPDATE ${table} SET ${setSql} WHERE id = ?`, values);
   }
-  const row = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(req.params.id);
+  const row = await db.get(`SELECT * FROM ${table} WHERE id = ?`, [req.params.id]);
   res.json(serializeRow(table, row));
-});
+}));
 
-app.delete('/api/entities/:entity/:id', auth, (req, res) => {
+app.delete('/api/entities/:entity/:id', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
-  db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(req.params.id);
+  await db.run(`DELETE FROM ${table} WHERE id = ?`, [req.params.id]);
   res.json({ ok: true });
-});
+}));
 
 // Public: list active products without auth (storefront) & create guest orders
-app.get('/api/public/products', (req, res) => {
-  const rows = db.prepare('SELECT * FROM products ORDER BY sort_order ASC').all();
+app.get('/api/public/products', ah(async (req, res) => {
+  const rows = await db.all('SELECT * FROM products ORDER BY sort_order ASC');
   res.json(rows.map(r => serializeRow('products', r)));
-});
+}));
 
-app.post('/api/public/orders', (req, res) => {
+app.post('/api/public/orders', ah(async (req, res) => {
   const body = deserializeBody('orders', req.body || {});
   const id = uuidv4();
   const cols = Object.keys(body);
   const allCols = ['id', ...cols, 'status', 'created_date', 'updated_date'];
   const placeholders = allCols.map(() => '?').join(', ');
   const values = [id, ...cols.map(c => body[c]), 'pending', now(), now()];
-  db.prepare(`INSERT INTO orders (${allCols.join(', ')}) VALUES (${placeholders})`).run(...values);
-  const row = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
+  await db.run(`INSERT INTO orders (${allCols.join(', ')}) VALUES (${placeholders})`, values);
+  const row = await db.get('SELECT * FROM orders WHERE id = ?', [id]);
   res.json(serializeRow('orders', row));
-});
+}));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: now() }));
 
-app.listen(PORT, () => console.log(`Natural Ice backend listening on :${PORT}`));
+// Fallback error handler for any unexpected async errors.
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'internal server error' });
+});
+
+async function start() {
+  await db.init();
+  app.listen(PORT, () => console.log(`Natural Ice backend listening on :${PORT}`));
+}
+
+start().catch((err) => {
+  console.error('FATAL: failed to start server', err);
+  process.exit(1);
+});
