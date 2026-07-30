@@ -229,7 +229,7 @@ export default function PublicStorefront() {
               Our Products
             </button>
             <a
-              href="https://www.google.com/maps/search/?api=1&query=22nd+St+Al+Qouz+Ind+3+Al+Quoz+Dubai"
+              href="https://www.google.com/maps/search/?api=1&query=25.117455,55.217554"
               target="_blank"
               rel="noreferrer"
               className="hidden lg:flex items-center gap-1.5 hover:text-primary transition-colors"
