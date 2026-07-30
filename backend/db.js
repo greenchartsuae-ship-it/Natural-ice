@@ -5,9 +5,11 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+// DATABASE_URL should be the connection string exactly as copied from the
+// Neon console (includes sslmode=require&channel_binding=require), which
+// pg's connection-string parser handles correctly out of the box.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
 });
 
 // Convert SQLite-style "?" placeholders (used throughout the app) to
