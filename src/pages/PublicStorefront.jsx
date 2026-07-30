@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ShoppingCart, Plus, Minus, Package, Search, X, Trash2, LogIn, MapPin, Phone, Mail, Globe, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { computeDeliveryFee, amountUntilFreeDelivery } from '@/lib/deliveryFee';
+import OrderTracker from '@/components/shared/OrderTracker';
 
 export default function PublicStorefront() {
   const [cart, setCart] = useState({});
@@ -18,6 +19,7 @@ export default function PublicStorefront() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [orderOpen, setOrderOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [confirmedOrder, setConfirmedOrder] = useState(null);
   const [checkoutData, setCheckoutData] = useState({
     client_name: '',
     client_email: '',
