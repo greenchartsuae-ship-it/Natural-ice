@@ -207,11 +207,6 @@ export default function PublicStorefront() {
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-primary/10 to-accent/10 py-12">
         <div className="max-w-7xl mx-auto px-4 flex justify-center">
-          <img
-            src="https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/ccd9c0ca3_logopng.png"
-            alt="Natural Ice"
-            className="h-48 md:h-64 w-auto object-contain"
-          />
         </div>
       </section>
 
