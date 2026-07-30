@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ShoppingCart, Plus, Minus, Package, Search, X, Trash2, LogIn, MapPin, Phone, Mail, Globe, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { computeDeliveryFee, amountUntilFreeDelivery } from '@/lib/deliveryFee';
+import { computeDeliveryFee, amountUntilFreeDelivery, computeVat } from '@/lib/deliveryFee';
 import OrderTracker from '@/components/shared/OrderTracker';
 
 export default function PublicStorefront() {
@@ -71,7 +71,8 @@ export default function PublicStorefront() {
   const hasRequestPricedItems = cartItems.some(item => item.product.price_on_request);
   const deliveryFee = computeDeliveryFee(cartTotal);
   const remainingForFree = amountUntilFreeDelivery(cartTotal);
-  const grandTotal = cartTotal + deliveryFee;
+  const vatAmount = computeVat(cartTotal);
+  const grandTotal = cartTotal + deliveryFee + vatAmount;
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -323,6 +324,10 @@ export default function PublicStorefront() {
               {remainingForFree > 0 && (
                 <p className="text-xs text-orange-600">Add AED {remainingForFree.toFixed(2)} more for free delivery</p>
               )}
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>VAT (5%)</span>
+                <span>AED {vatAmount.toFixed(2)}</span>
+              </div>
               {hasRequestPricedItems && (
                 <p className="text-xs text-amber-600">Some items are priced "As per Request" — final total will be confirmed after we contact you.</p>
               )}
