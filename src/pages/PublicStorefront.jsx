@@ -101,7 +101,7 @@ export default function PublicStorefront() {
     label: CATEGORY_LABELS[cat] || cat.replace(/_/g, ' '),
     icon: activeProducts.find(p => p.category === cat && p.image_url)?.image_url || null,
   }));
-  const currentCategoryLabel = categoryFilter === 'all' ? 'Our Menu' : (CATEGORY_LABELS[categoryFilter] || categoryFilter.replace(/_/g, ' '));
+  const currentCategoryLabel = categoryFilter === 'all' ? 'Our Products' : (CATEGORY_LABELS[categoryFilter] || categoryFilter.replace(/_/g, ' '));
 
   const cartCount = Object.values(cart).reduce((s, q) => s + q, 0);
 
@@ -225,7 +225,7 @@ export default function PublicStorefront() {
               onClick={() => setCategoryFilter('all')}
               className={`transition-colors ${categoryFilter === 'all' ? 'text-primary' : 'hover:text-primary'}`}
             >
-              Our Menu
+              Our Products
             </button>
             <a
               href="https://www.google.com/maps/search/?api=1&query=22nd+St+Al+Qouz+Ind+3+Al+Quoz+Dubai"
