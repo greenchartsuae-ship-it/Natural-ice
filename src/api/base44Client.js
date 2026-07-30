@@ -75,5 +75,6 @@ export const base44 = {
   public: {
     listProducts: () => request('/public/products'),
     createOrder: (data) => request('/public/orders', { method: 'POST', body: JSON.stringify(data) }),
+    getOrderStatus: (id) => request(`/public/orders/${id}`),
   },
 };

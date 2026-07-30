@@ -325,6 +325,16 @@ app.post('/api/public/orders', ah(async (req, res) => {
   res.json(serializeRow('orders', row));
 }));
 
+// Public: lightweight order status lookup for post-checkout tracking (no auth, no sensitive fields)
+app.get('/api/public/orders/:id', ah(async (req, res) => {
+  const row = await db.get(
+    'SELECT id, status, delivery_date, driver_name, total_amount, created_date FROM orders WHERE id = ?',
+    [req.params.id]
+  );
+  if (!row) return res.status(404).json({ error: 'not found' });
+  res.json(serializeRow('orders', row));
+}));
+
 app.get('/api/health', (req, res) => res.json({ ok: true, time: now() }));
 
 // Fallback error handler for any unexpected async errors.

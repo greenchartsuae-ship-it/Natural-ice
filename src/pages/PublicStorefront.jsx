@@ -82,15 +82,25 @@ export default function PublicStorefront() {
 
   const createOrderMutation = useMutation({
     mutationFn: (orderData) => base44.public.createOrder(orderData),
-    onSuccess: () => {
+    onSuccess: (createdOrder) => {
       setCart({});
       setCheckoutOpen(false);
+      setConfirmedOrder(createdOrder);
       toast.success('Order placed successfully! We will contact you soon.');
     },
     onError: (error) => {
       toast.error('Failed to place order. Please try again.');
       console.error(error);
     },
+  });
+
+  // Poll the order status live so the customer sees updates (Approved, Preparing, etc.)
+  // as the team processes it, without needing to log in.
+  const { data: trackedOrder } = useQuery({
+    queryKey: ['track-order', confirmedOrder?.id],
+    queryFn: () => base44.public.getOrderStatus(confirmedOrder.id),
+    enabled: !!confirmedOrder?.id,
+    refetchInterval: 15000,
   });
 
   const handleSubmitOrder = () => {
@@ -434,6 +444,32 @@ export default function PublicStorefront() {
             <Button onClick={handleSubmitOrder} disabled={createOrderMutation.isPending}>
               {createOrderMutation.isPending ? 'Placing Order...' : 'Place Order'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Confirmation + Live Tracking Dialog */}
+      <Dialog open={!!confirmedOrder} onOpenChange={(open) => !open && setConfirmedOrder(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Order Confirmed 🎉</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Thank you! Your order has been received. Track its progress below — this updates automatically.
+            </p>
+            <OrderTracker status={trackedOrder?.status || confirmedOrder?.status || 'pending'} />
+            <div className="flex items-center justify-between text-sm border-t pt-3">
+              <span className="text-muted-foreground">Order ID</span>
+              <span className="font-mono text-xs">{confirmedOrder?.id?.slice(0, 8)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-semibold">AED {(trackedOrder?.total_amount ?? confirmedOrder?.total_amount)?.toFixed(2)}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setConfirmedOrder(null)}>Continue Shopping</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
