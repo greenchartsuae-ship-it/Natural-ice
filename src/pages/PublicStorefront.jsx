@@ -21,6 +21,7 @@ export default function PublicStorefront() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState(null);
   const [locating, setLocating] = useState(false);
+  const [previewProduct, setPreviewProduct] = useState(null);
 
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
@@ -341,15 +342,15 @@ export default function PublicStorefront() {
                 {filtered.map((product, index) => (
                   <div key={product.id} className="flex flex-col items-center text-center group">
                     {product.image_url ? (
-                      <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden bg-muted mb-3 ring-1 ring-border">
+                      <button type="button" onClick={() => setPreviewProduct(product)} className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden bg-muted mb-3 ring-1 ring-border cursor-pointer">
                         <img src={product.image_url} alt={product.name} loading={index < 3 ? "eager" : "lazy"} fetchpriority={index === 0 ? "high" : "auto"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      </div>
+                      </button>
                     ) : (
-                      <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-3 ring-1 ring-border">
+                      <button type="button" onClick={() => setPreviewProduct(product)} className="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-3 ring-1 ring-border cursor-pointer">
                         <Package className="w-12 h-12 text-primary/30" />
-                      </div>
+                      </button>
                     )}
-                    <h3 className="font-semibold text-sm sm:text-base leading-snug mb-1">{product.name}</h3>
+                    <h3 className="font-semibold text-sm sm:text-base leading-snug mb-1 cursor-pointer hover:text-primary transition-colors" onClick={() => setPreviewProduct(product)}>{product.name}</h3>
                     {product.price_on_request ? (
                       <p className="text-sm font-bold text-amber-600 mb-2">As per Request</p>
                     ) : (
@@ -381,6 +382,56 @@ export default function PublicStorefront() {
           </div>
         </div>
       </main>
+
+      {/* Product Preview Dialog */}
+      <Dialog open={!!previewProduct} onOpenChange={(open) => !open && setPreviewProduct(null)}>
+        <DialogContent className="max-w-md">
+          {previewProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{previewProduct.name}</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col items-center text-center gap-4">
+                {previewProduct.image_url ? (
+                  <img src={previewProduct.image_url} alt={previewProduct.name} className="w-56 h-56 rounded-2xl object-cover ring-1 ring-border" />
+                ) : (
+                  <div className="w-56 h-56 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center ring-1 ring-border">
+                    <Package className="w-16 h-16 text-primary/30" />
+                  </div>
+                )}
+                {previewProduct.description && (
+                  <p className="text-sm text-muted-foreground">{previewProduct.description}</p>
+                )}
+                {previewProduct.price_on_request ? (
+                  <p className="text-lg font-bold text-amber-600">As per Request</p>
+                ) : (
+                  <p className="text-xl font-bold text-primary">
+                    AED {previewProduct.price}
+                    <span className="text-sm font-normal text-muted-foreground"> /{previewProduct.unit}</span>
+                  </p>
+                )}
+                {previewProduct.min_order_quantity > 1 && (
+                  <p className="text-xs text-muted-foreground">Minimum order: {previewProduct.min_order_quantity} {previewProduct.unit}</p>
+                )}
+              </div>
+              <DialogFooter className="gap-2">
+                {previewProduct.price_on_request ? (
+                  <a href="mailto:Info@icenatural.com" className="w-full">
+                    <Button className="w-full">Contact Us</Button>
+                  </a>
+                ) : (
+                  <Button
+                    className="w-full gap-1"
+                    onClick={() => { updateCart(previewProduct.id, 1); setPreviewProduct(null); }}
+                  >
+                    <Plus className="w-4 h-4" /> Add to Cart
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Cart Dialog */}
       <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
