@@ -338,43 +338,58 @@ export default function PublicStorefront() {
                 <p className="text-muted-foreground">No products found</p>
               </Card>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-10">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {filtered.map((product, index) => (
-                  <div key={product.id} className="flex flex-col items-center text-center group">
-                    {product.image_url ? (
-                      <button type="button" onClick={() => setPreviewProduct(product)} className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden bg-muted mb-3 ring-1 ring-border cursor-pointer">
+                  <div key={product.id} className="flex flex-col rounded-lg border border-border overflow-hidden bg-card group">
+                    <button type="button" onClick={() => setPreviewProduct(product)} className="relative w-full aspect-[4/3] bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden cursor-pointer">
+                      {product.image_url ? (
                         <img src={product.image_url} alt={product.name} loading={index < 3 ? "eager" : "lazy"} fetchpriority={index === 0 ? "high" : "auto"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      </button>
-                    ) : (
-                      <button type="button" onClick={() => setPreviewProduct(product)} className="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-3 ring-1 ring-border cursor-pointer">
-                        <Package className="w-12 h-12 text-primary/30" />
-                      </button>
-                    )}
-                    <h3 className="font-semibold text-sm sm:text-base leading-snug mb-1 cursor-pointer hover:text-primary transition-colors" onClick={() => setPreviewProduct(product)}>{product.name}</h3>
-                    {product.price_on_request ? (
-                      <p className="text-sm font-bold text-amber-600 mb-2">As per Request</p>
-                    ) : (
-                      <p className="text-base font-bold text-primary mb-2">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
-                    )}
-                    {product.price_on_request ? (
-                      <a href="mailto:Info@icenatural.com" className="text-xs font-medium text-primary hover:underline">
-                        Contact Us
-                      </a>
-                    ) : cart[product.id] ? (
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCart(product.id, -1)}>
-                          <Minus className="w-3 h-3" />
-                        </Button>
-                        <span className="w-6 text-center text-sm font-semibold">{cart[product.id]}</span>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCart(product.id, 1)}>
-                          <Plus className="w-3 h-3" />
-                        </Button>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-12 h-12 text-primary/30" />
+                        </div>
+                      )}
+                      {product.category && (
+                        <span className="absolute top-2 right-2 bg-white/90 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm text-foreground">
+                          {CATEGORY_LABELS[product.category] || product.category.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </button>
+                    <div className="flex flex-col flex-1 p-3">
+                      <h3 className="font-semibold text-sm leading-snug mb-1 cursor-pointer hover:text-primary transition-colors" onClick={() => setPreviewProduct(product)}>{product.name}</h3>
+                      {product.description && (
+                        <p className="text-xs text-muted-foreground leading-snug mb-2 line-clamp-2">{product.description}</p>
+                      )}
+                      {product.min_order_quantity > 1 && (
+                        <p className="text-[10px] text-amber-600 mb-2">Min. order: {product.min_order_quantity} pieces</p>
+                      )}
+                      <div className="mt-auto flex items-center justify-between gap-2">
+                        {product.price_on_request ? (
+                          <p className="text-sm font-bold text-amber-600">As per Request</p>
+                        ) : (
+                          <p className="text-base font-bold text-primary">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
+                        )}
+                        {product.price_on_request ? (
+                          <a href="mailto:Info@icenatural.com" className="text-xs font-medium text-primary hover:underline shrink-0">
+                            Contact Us
+                          </a>
+                        ) : cart[product.id] ? (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCart(product.id, -1)}>
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-5 text-center text-sm font-semibold">{cart[product.id]}</span>
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCart(product.id, 1)}>
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button size="sm" onClick={() => updateCart(product.id, 1)} className="gap-1 rounded-full shrink-0">
+                            <Plus className="w-3 h-3" /> Add
+                          </Button>
+                        )}
                       </div>
-                    ) : (
-                      <Button size="sm" variant="outline" onClick={() => updateCart(product.id, 1)} className="gap-1 rounded-full">
-                        <Plus className="w-3 h-3" /> Add
-                      </Button>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
