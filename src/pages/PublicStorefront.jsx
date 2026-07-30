@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, Plus, Minus, Package, Search, X, Trash2, LogIn, MapPin, Phone, Mail, Globe, Clock, LocateFixed, Loader2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Package, Search, X, Trash2, LogIn, MapPin, Phone, Mail, Globe, Clock, LocateFixed, Loader2, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import { computeDeliveryFee, amountUntilFreeDelivery, computeVat } from '@/lib/deliveryFee';
 import OrderTracker from '@/components/shared/OrderTracker';
@@ -79,6 +79,29 @@ export default function PublicStorefront() {
     const matchCategory = categoryFilter === 'all' || p.category === categoryFilter;
     return matchSearch && matchCategory;
   });
+
+  const CATEGORY_LABELS = {
+    crushed_ice: 'Crushed Ice',
+    custom_ice: 'Custom Ice',
+    diamond_ice: 'Diamond Ice',
+    dry_ice: 'Dry Ice',
+    ice_ball: 'Ice Ball',
+    ice_cream: 'Ice Cream',
+    ice_cube: 'Ice Cube',
+    large_ice_cube: 'Large Ice Cubes',
+    long_ice_cube: 'Long Ice Cube',
+    luxury_ice: 'Luxury Ice',
+    tube_ice: 'Tube Ice',
+    other: 'Other',
+  };
+  const CATEGORY_ORDER = ['crushed_ice', 'custom_ice', 'diamond_ice', 'dry_ice', 'ice_ball', 'ice_cream', 'ice_cube', 'large_ice_cube', 'long_ice_cube', 'luxury_ice', 'tube_ice', 'other'];
+  const presentCategories = CATEGORY_ORDER.filter(cat => activeProducts.some(p => p.category === cat));
+  const sidebarCategories = presentCategories.map(cat => ({
+    value: cat,
+    label: CATEGORY_LABELS[cat] || cat.replace(/_/g, ' '),
+    icon: activeProducts.find(p => p.category === cat && p.image_url)?.image_url || null,
+  }));
+  const currentCategoryLabel = categoryFilter === 'all' ? 'Our Menu' : (CATEGORY_LABELS[categoryFilter] || categoryFilter.replace(/_/g, ' '));
 
   const cartCount = Object.values(cart).reduce((s, q) => s + q, 0);
 
@@ -174,135 +197,189 @@ export default function PublicStorefront() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Utility Bar */}
+      <div className="bg-neutral-900 text-white text-xs">
+        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-end gap-5">
+          <a href="tel:+97143477727" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+            <Phone className="w-3 h-3" /> +971 4 347 7727
+          </a>
+          <a href="mailto:Info@icenatural.com" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+            <Mail className="w-3 h-3" /> Info@icenatural.com
+          </a>
+        </div>
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 shrink-0">
             <img
               src="https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/ccd9c0ca3_logopng.png"
               alt="Natural Ice"
-              className="h-12 w-auto object-contain"
+              className="h-10 w-auto object-contain"
             />
           </div>
-          <div className="flex items-center gap-2">
+
+          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold">
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`transition-colors ${categoryFilter === 'all' ? 'text-primary' : 'hover:text-primary'}`}
+            >
+              Our Menu
+            </button>
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=22nd+St+Al+Qouz+Ind+3+Al+Quoz+Dubai"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden lg:flex items-center gap-1.5 hover:text-primary transition-colors"
+            >
+              <MapPin className="w-4 h-4" /> Locate Us
+            </a>
+          </nav>
+
+          <div className="flex items-center gap-2 flex-1 justify-end">
+            <div className="relative hidden sm:block w-full max-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search menu..."
+                className="pl-10 h-9"
+              />
+            </div>
             <Button
               variant="outline"
+              size="sm"
               onClick={() => base44.auth.redirectToLogin('/catalog')}
-              className="gap-2"
+              className="gap-2 hidden sm:inline-flex"
             >
               <LogIn className="w-4 h-4" />
               Login
             </Button>
-            {cartCount > 0 && (
-              <Button onClick={() => setOrderOpen(true)} className="gap-2 relative">
-                <ShoppingCart className="w-4 h-4" />
-                Cart ({cartCount})
-                <span className="text-sm font-bold ml-1">AED {grandTotal.toFixed(2)}</span>
-              </Button>
-            )}
+            <Button
+              onClick={() => setOrderOpen(true)}
+              className="gap-2 relative rounded-full bg-primary hover:bg-primary/90 font-bold"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              {cartCount > 0 ? `Cart (${cartCount}) · AED ${grandTotal.toFixed(2)}` : 'Order Now'}
+            </Button>
           </div>
+        </div>
+        <div className="relative sm:hidden max-w-7xl mx-auto px-4 pb-3">
+          <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search menu..."
+            className="pl-10 h-9"
+          />
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary/10 to-accent/10 py-12">
-        <div className="max-w-7xl mx-auto px-4 flex justify-center">
-        </div>
-      </section>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Filters */}
-        <div className="flex gap-3 flex-wrap mb-6">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              placeholder="Search products..." 
-              className="pl-10" 
-            />
-          </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="crushed_ice">Crushed Ice</SelectItem>
-              <SelectItem value="custom_ice">Custom Ice</SelectItem>
-              <SelectItem value="diamond_ice">Diamond Ice</SelectItem>
-              <SelectItem value="dry_ice">Dry Ice</SelectItem>
-              <SelectItem value="ice_ball">Ice Ball</SelectItem>
-              <SelectItem value="ice_cream">Ice Cream</SelectItem>
-              <SelectItem value="ice_cube">Ice Cube</SelectItem>
-              <SelectItem value="large_ice_cube">Large Ice Cubes</SelectItem>
-              <SelectItem value="long_ice_cube">Long Ice Cube</SelectItem>
-              <SelectItem value="luxury_ice">Luxury Ice</SelectItem>
-              <SelectItem value="tube_ice">Tube Ice</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Category Sidebar */}
+          <aside className="hidden md:block w-56 shrink-0">
+            <div className="sticky top-24 border rounded-lg overflow-hidden divide-y bg-card">
+              <button
+                onClick={() => setCategoryFilter('all')}
+                className={`w-full flex items-center gap-3 px-3 py-3 text-left text-sm font-medium transition-colors ${categoryFilter === 'all' ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`}
+              >
+                <span className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                  <LayoutGrid className="w-5 h-5 text-primary" />
+                </span>
+                All Products
+              </button>
+              {sidebarCategories.map(cat => (
+                <button
+                  key={cat.value}
+                  onClick={() => setCategoryFilter(cat.value)}
+                  className={`w-full flex items-center gap-3 px-3 py-3 text-left text-sm font-medium transition-colors ${categoryFilter === cat.value ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`}
+                >
+                  {cat.icon ? (
+                    <img src={cat.icon} alt={cat.label} className="w-10 h-10 rounded-md object-cover shrink-0" />
+                  ) : (
+                    <span className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-primary" />
+                    </span>
+                  )}
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </aside>
 
-        {/* Products Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1,2,3,4,5,6].map(i => <Card key={i} className="h-64 animate-pulse bg-muted" />)}
+          {/* Mobile Category Filter */}
+          <div className="md:hidden">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {sidebarCategories.map(cat => (
+                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ) : filtered.length === 0 ? (
-          <Card className="py-16 text-center">
-            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No products found</p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((product, index) => (
-              <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-all group">
-                {product.image_url ? (
-                  <div className="h-44 bg-muted overflow-hidden">
-                    <img src={product.image_url} alt={product.name} loading={index < 3 ? "eager" : "lazy"} fetchpriority={index === 0 ? "high" : "auto"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  </div>
-                ) : (
-                  <div className="h-44 bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
-                    <Package className="w-16 h-16 text-primary/30" />
-                  </div>
-                )}
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-lg">{product.name}</h3>
-                    <Badge variant="outline" className="capitalize text-xs">{product.category?.replace('_', ' ')}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
-                  <div className="flex items-center justify-between">
-                    {product.price_on_request ? (
-                      <p className="text-lg font-bold text-amber-600">As per Request</p>
+
+          {/* Products */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-center md:text-left mb-8">{currentCategoryLabel}</h1>
+
+            {isLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+                {[1,2,3,4,5,6].map(i => <div key={i} className="h-56 animate-pulse bg-muted rounded-lg" />)}
+              </div>
+            ) : filtered.length === 0 ? (
+              <Card className="py-16 text-center">
+                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No products found</p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-10">
+                {filtered.map((product, index) => (
+                  <div key={product.id} className="flex flex-col items-center text-center group">
+                    {product.image_url ? (
+                      <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden bg-muted mb-3 ring-1 ring-border">
+                        <img src={product.image_url} alt={product.name} loading={index < 3 ? "eager" : "lazy"} fetchpriority={index === 0 ? "high" : "auto"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      </div>
                     ) : (
-                      <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
+                      <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-3 ring-1 ring-border">
+                        <Package className="w-12 h-12 text-primary/30" />
+                      </div>
+                    )}
+                    <h3 className="font-semibold text-sm sm:text-base leading-snug mb-1">{product.name}</h3>
+                    {product.price_on_request ? (
+                      <p className="text-sm font-bold text-amber-600 mb-2">As per Request</p>
+                    ) : (
+                      <p className="text-base font-bold text-primary mb-2">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
                     )}
                     {product.price_on_request ? (
-                      <a href="mailto:Info@icenatural.com" className="text-sm font-medium text-primary hover:underline">
+                      <a href="mailto:Info@icenatural.com" className="text-xs font-medium text-primary hover:underline">
                         Contact Us
                       </a>
                     ) : cart[product.id] ? (
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCart(product.id, -1)}>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCart(product.id, -1)}>
                           <Minus className="w-3 h-3" />
                         </Button>
-                        <span className="w-8 text-center font-semibold">{cart[product.id]}</span>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCart(product.id, 1)}>
+                        <span className="w-6 text-center text-sm font-semibold">{cart[product.id]}</span>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCart(product.id, 1)}>
                           <Plus className="w-3 h-3" />
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" onClick={() => updateCart(product.id, 1)} className="gap-1">
+                      <Button size="sm" variant="outline" onClick={() => updateCart(product.id, 1)} className="gap-1 rounded-full">
                         <Plus className="w-3 h-3" /> Add
                       </Button>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </main>
 
       {/* Cart Dialog */}
