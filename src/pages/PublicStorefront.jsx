@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, Plus, Minus, Package, Search, X, Trash2, LogIn, MapPin, Phone, Mail, Globe, Clock } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Package, Search, X, Trash2, LogIn, MapPin, Phone, Mail, Globe, Clock, LocateFixed, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { computeDeliveryFee, amountUntilFreeDelivery, computeVat } from '@/lib/deliveryFee';
 import OrderTracker from '@/components/shared/OrderTracker';
@@ -20,6 +20,44 @@ export default function PublicStorefront() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState(null);
+  const [locating, setLocating] = useState(false);
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Location is not supported on this device/browser.');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const address = data?.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            setCheckoutData((prev) => ({ ...prev, delivery_address: address }));
+            toast.success('Location detected and address filled in.');
+          } else {
+            setCheckoutData((prev) => ({ ...prev, delivery_address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` }));
+            toast.success('Location detected.');
+          }
+        } catch (err) {
+          setCheckoutData((prev) => ({ ...prev, delivery_address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` }));
+          toast.success('Location detected.');
+        } finally {
+          setLocating(false);
+        }
+      },
+      (error) => {
+        setLocating(false);
+        toast.error('Could not get your location. Please allow location access or type your address manually.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
   const [checkoutData, setCheckoutData] = useState({
     client_name: '',
     client_email: '',
@@ -421,11 +459,23 @@ export default function PublicStorefront() {
             </div>
             <div>
               <Label>Delivery Address *</Label>
-              <Input
-                value={checkoutData.delivery_address}
-                onChange={e => setCheckoutData({ ...checkoutData, delivery_address: e.target.value })}
-                placeholder="Street 22, Al Quoz, Dubai"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={checkoutData.delivery_address}
+                  onChange={e => setCheckoutData({ ...checkoutData, delivery_address: e.target.value })}
+                  placeholder="Street 22, Al Quoz, Dubai"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleUseMyLocation}
+                  disabled={locating}
+                  title="Use my current location"
+                >
+                  {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
             <div>
               <Label>Delivery Date (Optional)</Label>
