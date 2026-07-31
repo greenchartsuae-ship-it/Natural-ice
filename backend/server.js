@@ -219,6 +219,14 @@ function serializeRow(table, row) {
 
 function deserializeBody(table, body) {
   const out = { ...body };
+  // Never let client-supplied id/created_date/updated_date leak into an
+  // INSERT/UPDATE — the server always manages these itself. Without this,
+  // forms that round-trip a full row (e.g. edit dialogs) would duplicate
+  // these columns in the generated SQL and Postgres would reject the query
+  // with "multiple assignments to same column", silently failing saves.
+  delete out.id;
+  delete out.created_date;
+  delete out.updated_date;
   (JSON_FIELDS[table] || []).forEach(f => {
     if (f in out && typeof out[f] !== 'string') {
       out[f] = JSON.stringify(out[f]);
