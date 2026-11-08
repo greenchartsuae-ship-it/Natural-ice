@@ -1,6 +1,6 @@
 import React from 'react';
 
-const IMG = 'https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/';
+const IMG = '/media/';
 const CERTS = [
   { img: IMG + '9ae5b2e1b_natural-ice-iso-22000-certificate.jpg', alt: 'Natural Ice ISO 22000:2018 food safety certificate' },
   { img: IMG + 'f2937884f_natural-ice-haccp-certificate.jpg', alt: 'Natural Ice HACCP certificate' },

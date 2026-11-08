@@ -7,7 +7,7 @@ import { CUSTOM_ICE_FAQS } from '@/lib/pageFaqs';
 import { Button } from '@/components/ui/button';
 import { MessageCircle } from 'lucide-react';
 
-const VIDEO = 'https://media.base44.com/videos/public/6a742cb7f9842b00a4e6cd76/05a8e44ac_naturalicecostumice.mp4';
+const VIDEO = '/media/05a8e44ac_naturalicecostumice.mp4';
 
 export default function CustomIce() {
   return (
@@ -49,7 +49,7 @@ export default function CustomIce() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="aspect-square bg-slate-50 overflow-hidden">
-              <img src="https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/8d2bbdbec_WhatsApp_Image_2026-08-10_at_145857_202608281650.jpeg" alt="2027 Happy New Year Ice Sculpture" className="w-full h-full object-cover" loading="lazy" />
+              <img src="/media/8d2bbdbec_WhatsApp_Image_2026-08-10_at_145857_202608281650.jpeg" alt="2027 Happy New Year Ice Sculpture" className="w-full h-full object-cover" loading="lazy" />
             </div>
             <div className="p-3">
               <p className="text-sm font-semibold text-slate-800 line-clamp-1">2027 Happy New Year Ice Sculpture</p>
@@ -63,7 +63,7 @@ export default function CustomIce() {
           </div>
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="aspect-square bg-slate-50 overflow-hidden">
-              <img src="https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/ed0742df3_Make_ice_look_real_202608281650.jpeg" alt="Head Line Seafood Ice Bar Sculpture" className="w-full h-full object-cover" loading="lazy" />
+              <img src="/media/ed0742df3_Make_ice_look_real_202608281650.jpeg" alt="Head Line Seafood Ice Bar Sculpture" className="w-full h-full object-cover" loading="lazy" />
             </div>
             <div className="p-3">
               <p className="text-sm font-semibold text-slate-800 line-clamp-1">Head Line Seafood Ice Bar</p>
@@ -77,7 +77,7 @@ export default function CustomIce() {
           </div>
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="aspect-square bg-slate-50 overflow-hidden">
-              <img src="https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/1038e1e02_Technical_diagram_of_ice_bar_202608281739.jpeg" alt="P&H Wedding Ice Bar Sculpture" className="w-full h-full object-cover" loading="lazy" />
+              <img src="/media/1038e1e02_Technical_diagram_of_ice_bar_202608281739.jpeg" alt="P&H Wedding Ice Bar Sculpture" className="w-full h-full object-cover" loading="lazy" />
             </div>
             <div className="p-3">
               <p className="text-sm font-semibold text-slate-800 line-clamp-1">P&H Wedding Ice Bar</p>
@@ -91,7 +91,7 @@ export default function CustomIce() {
           </div>
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="aspect-square bg-slate-50 overflow-hidden">
-              <img src="https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/159e21acf_Seafood_ice_sculpture_display_202608281746.jpeg" alt="Seafood Ice Display Tower" className="w-full h-full object-cover" loading="lazy" />
+              <img src="/media/159e21acf_Seafood_ice_sculpture_display_202608281746.jpeg" alt="Seafood Ice Display Tower" className="w-full h-full object-cover" loading="lazy" />
             </div>
             <div className="p-3">
               <p className="text-sm font-semibold text-slate-800 line-clamp-1">Seafood Ice Display Tower</p>

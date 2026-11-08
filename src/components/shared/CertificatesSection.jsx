@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { ShieldCheck, FileText } from 'lucide-react';
 import { isArabicPath } from '@/lib/i18n';
 
-const IMG = 'https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/';
+const IMG = '/media/';
 const CERTS = [
   { name: 'ISO 22000:2018', nameAr: 'ISO 22000:2018', desc: 'Food Safety Management System · No. CQ25-1111 · Valid until 11 Jul 2028', descAr: 'نظام إدارة سلامة الغذاء · رقم CQ25-1111 · صالحة حتى 11 يوليو 2028', img: IMG + '9ae5b2e1b_natural-ice-iso-22000-certificate.jpg', alt: 'Natural Ice ISO 22000:2018 food safety certificate' },
   { name: 'HACCP', nameAr: 'HACCP', desc: 'Codex CAC/RCP 1-1969 · No. CQ25-1110 · Valid until 11 Jul 2028', descAr: 'الدستور الغذائي CAC/RCP 1-1969 · رقم CQ25-1110 · صالحة حتى 11 يوليو 2028', img: IMG + 'f2937884f_natural-ice-haccp-certificate.jpg', alt: 'Natural Ice HACCP certificate' },

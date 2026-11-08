@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ASSET = (f) =>
-  `https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/${f}`;
+  `/media/${f}`;
 
 // Scattered little ice cubes at the base of the products
 const SMALL_CUBES = [

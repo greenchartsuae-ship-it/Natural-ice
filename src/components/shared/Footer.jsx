@@ -4,7 +4,7 @@ import { EMIRATE_PAGES } from '@/lib/emiratePages';
 import { isArabicPath } from '@/lib/i18n';
 import { MapPin, Phone, Mail, Globe, Clock } from 'lucide-react';
 
-const LOGO = 'https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/cf868753a_natural-ice-logo.png';
+const LOGO = '/media/cf868753a_natural-ice-logo.png';
 
 const T = {
   en: {

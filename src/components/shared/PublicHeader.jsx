@@ -4,7 +4,7 @@ import TopNav from '@/components/shared/TopNav';
 import BackButton from '@/components/shared/BackButton';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 
-const LOGO = 'https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/cf868753a_natural-ice-logo.png';
+const LOGO = '/media/cf868753a_natural-ice-logo.png';
 
 export default function PublicHeader({ children }) {
   const location = useLocation();

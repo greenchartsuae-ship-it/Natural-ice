@@ -215,7 +215,7 @@ export default function PublicStorefront() {
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 shrink-0">
             <img
-              src="https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/ccd9c0ca3_logopng.png"
+              src="/media/ccd9c0ca3_logopng.png"
               alt="Natural Ice"
               className="h-10 w-auto object-contain"
             />
@@ -531,7 +531,7 @@ export default function PublicStorefront() {
             {/* Brand */}
             <div>
               <img
-                src="https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/ccd9c0ca3_logopng.png"
+                src="/media/ccd9c0ca3_logopng.png"
                 alt="Natural Ice"
                 className="h-16 w-auto object-contain mb-3"
               />

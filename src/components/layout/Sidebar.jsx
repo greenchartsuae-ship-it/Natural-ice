@@ -74,7 +74,7 @@ export default function Sidebar({ user, collapsed, setCollapsed, mobileOpen, set
       {/* Logo */}
       <div className="px-3 py-4 border-b border-border flex flex-col items-center gap-2 bg-white">
         <img
-          src="https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/51a507825_logonaturalice.png"
+          src="/media/51a507825_logonaturalice.png"
           alt="Natural Ice"
           className={cn("object-contain", collapsed && !isMobile ? "h-10 w-10" : "h-24 w-full max-w-[200px]")}
         />

@@ -46,7 +46,7 @@ export default function Login() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <img
-            src="https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/ccd9c0ca3_logopng.png"
+            src="/media/ccd9c0ca3_logopng.png"
             alt="Natural Ice"
             className="h-16 w-auto object-contain mx-auto mb-2"
           />

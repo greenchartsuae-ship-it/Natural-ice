@@ -278,6 +278,19 @@ function buildWhere(filterObj, cols, params) {
   return parts.join(' AND ');
 }
 
+// ---------- Permissions ----------
+// admin: everything. delivery/production: read all orders + update order progress.
+// client/special_client: only their own orders / products / profile.
+const STAFF_ROLES = ['delivery', 'production'];
+const ORDER_LOCKED_FOR_STAFF = ['client_email', 'client_name', 'items', 'total_amount', 'delivery_fee', 'vat_amount', 'subtotal'];
+const ORDER_SERVER_ONLY = ['status', 'approved_at', 'preparing_at', 'ready_at', 'collected_at', 'on_the_way_at', 'delivered_at', 'driver_name', 'driver_phone', 'driver_email', 'driver_lat', 'driver_lng', 'driver_latitude', 'driver_longitude'];
+const isAdmin = (u) => !!u && u.role === 'admin';
+const isStaff = (u) => !!u && STAFF_ROLES.includes(u.role);
+
+function forbid(res) {
+  return res.status(403).json({ error: 'forbidden' });
+}
+
 const ENTITY_TABLES = {
   Product: 'products',
   Order: 'orders',
@@ -367,6 +380,17 @@ app.get('/api/entities/:entity', optionalAuth, ah(async (req, res) => {
       where.push("(exclusive_client_email IS NULL OR exclusive_client_email = '')");
     }
   }
+  // Row-level scoping: non-admins only ever see their own data.
+  if (req.user && !isAdmin(req.user) && table !== 'products') {
+    const email = String(req.user.email || '').toLowerCase();
+    if (table === 'orders') {
+      if (!isStaff(req.user)) { where.push('LOWER(client_email) = ?'); params.push(email); }
+    } else if (table === 'users') {
+      where.push('id = ?'); params.push(req.user.id);
+    } else {
+      where.push('LOWER(client_email) = ?'); params.push(email);
+    }
+  }
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   let sort = req.query.sort || '';
   if (sort) {
@@ -386,7 +410,14 @@ app.get('/api/entities/:entity', optionalAuth, ah(async (req, res) => {
 app.post('/api/entities/:entity', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
+  if (table !== 'orders' && !isAdmin(req.user)) return forbid(res);
   const body = await pickColumns(table, deserializeBody(table, req.body || {}));
+  if (table === 'orders' && !isAdmin(req.user)) {
+    // Customers can only create their own pending orders.
+    ORDER_SERVER_ONLY.forEach(k => delete body[k]);
+    body.client_email = String(req.user.email).toLowerCase();
+    body.status = 'pending';
+  }
   const id = uuidv4();
   const cols = Object.keys(body);
   const allCols = ['id', ...cols, 'created_date', 'updated_date'];
@@ -400,7 +431,9 @@ app.post('/api/entities/:entity', auth, ah(async (req, res) => {
 app.put('/api/entities/:entity/:id', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
+  if (!isAdmin(req.user) && !(table === 'orders' && isStaff(req.user))) return forbid(res);
   const body = await pickColumns(table, deserializeBody(table, req.body || {}));
+  if (table === 'orders' && !isAdmin(req.user)) ORDER_LOCKED_FOR_STAFF.forEach(k => delete body[k]);
   const cols = Object.keys(body);
   if (cols.length) {
     const setSql = cols.map(c => `${c} = ?`).join(', ') + ', updated_date = ?';
@@ -414,6 +447,7 @@ app.put('/api/entities/:entity/:id', auth, ah(async (req, res) => {
 app.delete('/api/entities/:entity/:id', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
+  if (!isAdmin(req.user)) return forbid(res);
   await db.run(`DELETE FROM ${table} WHERE id = ?`, [req.params.id]);
   res.json({ ok: true });
 }));
@@ -426,7 +460,7 @@ app.get('/api/public/products', ah(async (req, res) => {
 
 app.post('/api/public/orders', ah(async (req, res) => {
   const body = await pickColumns('orders', deserializeBody('orders', req.body || {}));
-  delete body.status;
+  ORDER_SERVER_ONLY.forEach(k => delete body[k]);
   const id = uuidv4();
   const cols = Object.keys(body);
   const allCols = ['id', ...cols, 'status', 'created_date', 'updated_date'];

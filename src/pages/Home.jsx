@@ -16,8 +16,8 @@ const HOME_FAQS = [
   ...FAQS,
 ];
 
-const LOGO = 'https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/cf868753a_natural-ice-logo.png';
-const VIDEO = 'https://media.base44.com/videos/public/6a742cb7f9842b00a4e6cd76/53a6f6faf_re.mp4';
+const LOGO = '/media/cf868753a_natural-ice-logo.png';
+const VIDEO = '/media/53a6f6faf_re.mp4';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ export default function Home() {
   });
   const activeProducts = products.filter((p) => p.is_active !== false);
 
-  const customIceImage = 'https://media.base44.com/images/public/6a742cb7f9842b00a4e6cd76/de963edd8_costumice.jpeg';
+  const customIceImage = '/media/de963edd8_costumice.jpeg';
 
   // Rotate the 4-item window every 30 minutes based on current time
   const [slotIndex, setSlotIndex] = useState(0);
