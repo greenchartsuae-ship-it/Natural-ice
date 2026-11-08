@@ -139,7 +139,8 @@ export default function PublicStorefront() {
       })),
     });
     setOrderOpen(false);
-    setCheckoutOpen(true);
+    // wait for the cart dialog's history entry to pop before opening checkout
+    setTimeout(() => setCheckoutOpen(true), 250);
   };
 
   const createOrderMutation = useMutation({
