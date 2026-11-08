@@ -13,6 +13,7 @@ import PrintInvoice from '@/components/shared/PrintInvoice';
 import { formatDubai } from '@/lib/formatDubaiTime';
 import { Eye, ShoppingCart, Trash2, Search, Printer, MapPin, Phone, Truck, Navigation, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { useBackButtonClose } from '@/hooks/useBackButtonClose';
 
 const ALL_STATUSES = ['pending','approved','preparing','ready','collected','on_the_way','delivered','cancelled'];
 const statusLabel = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -24,6 +25,7 @@ export default function AdminOrders() {
   const [printOrder, setPrintOrder] = useState(null);
   const [driverForm, setDriverForm] = useState({ driver_name: '', driver_phone: '' });
   const queryClient = useQueryClient();
+  useBackButtonClose(!!selected, () => setSelected(null));
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -159,10 +161,10 @@ export default function AdminOrders() {
                         {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => openOrder(order)}>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => openOrder(order)}>
                       <Eye className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setPrintOrder(order)} title="Print Invoice">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => setPrintOrder(order)} title="Print Invoice">
                       <Printer className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -199,18 +201,31 @@ export default function AdminOrders() {
                 </div>
                 {selected.delivery_date && <div><span className="text-muted-foreground">Deliver by:</span> <span className="font-medium">{selected.delivery_date}</span></div>}
                 {selected.delivery_address && (
-                  <div className="col-span-2 flex items-start gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                    <span className="font-medium text-sm">{selected.delivery_address}</span>
-                    {selected.delivery_lat && selected.delivery_lng && (
+                  <div className="col-span-2">
+                    <div className="flex items-start gap-1 mb-1">
+                      <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                      <span className="font-medium text-sm">{selected.delivery_address}</span>
+                    </div>
+                    <div className="flex gap-2 ml-5">
                       <a
-                        href={`https://www.google.com/maps?q=${selected.delivery_lat},${selected.delivery_lng}`}
+                        href={selected.delivery_lat && selected.delivery_lng
+                          ? `https://www.google.com/maps?q=${selected.delivery_lat},${selected.delivery_lng}`
+                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.delivery_address)}`}
                         target="_blank" rel="noopener noreferrer"
-                        className="ml-1 text-xs text-primary hover:underline shrink-0"
+                        className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium flex items-center gap-1"
                       >
-                        View map
+                        🗺 Google Maps
                       </a>
-                    )}
+                      <a
+                        href={selected.delivery_lat && selected.delivery_lng
+                          ? `https://waze.com/ul?ll=${selected.delivery_lat},${selected.delivery_lng}&navigate=yes`
+                          : `https://waze.com/ul?q=${encodeURIComponent(selected.delivery_address)}&navigate=yes`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-2 py-1 rounded bg-sky-50 text-sky-700 hover:bg-sky-100 font-medium flex items-center gap-1"
+                      >
+                        🚗 Waze
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>

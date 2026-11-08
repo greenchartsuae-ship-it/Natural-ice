@@ -2,16 +2,16 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Users, ShoppingCart, Factory, Truck,
-  Star, LogOut, ChevronLeft, ChevronRight, Snowflake, ClipboardList, X, FileText
+  Star, LogOut, ChevronLeft, ChevronRight, Snowflake, ClipboardList, X, FileText, UserCircle
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-const roleMenus = {
+export const roleMenus = {
   admin: [
     { label: 'Dashboard',       icon: LayoutDashboard, path: '/catalog' },
-    { label: 'Products',        icon: Package,         path: '/products' },
+    { label: 'Products',        icon: Package,         path: '/admin/products' },
     { label: 'Users & Clients', icon: Users,           path: '/clients' },
     { label: 'Special Clients', icon: Star,            path: '/special-clients' },
     { label: 'All Orders',      icon: ClipboardList,   path: '/orders' },
@@ -27,7 +27,7 @@ const roleMenus = {
     { label: 'Delivery Queue',   icon: Truck,         path: '/delivery' },
   ],
   client: [
-    { label: 'Catalog',          icon: Package,       path: '/' },
+    { label: 'Catalog',          icon: Package,       path: '/catalog' },
     { label: 'My Orders',        icon: ShoppingCart,  path: '/my-orders' },
   ],
   special_client: [
@@ -74,7 +74,7 @@ export default function Sidebar({ user, collapsed, setCollapsed, mobileOpen, set
       {/* Logo */}
       <div className="px-3 py-4 border-b border-border flex flex-col items-center gap-2 bg-white">
         <img
-          src="https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/4ef556cfe_WhatsAppImage2026-06-22at110035.jpg"
+          src="https://media.base44.com/images/public/69e4d4aaed7dc3117eed9c83/51a507825_logonaturalice.png"
           alt="Natural Ice"
           className={cn("object-contain", collapsed && !isMobile ? "h-10 w-10" : "h-24 w-full max-w-[200px]")}
         />
@@ -122,6 +122,17 @@ export default function Sidebar({ user, collapsed, setCollapsed, mobileOpen, set
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
         )}
+        <Link
+          to="/profile"
+          title={collapsed && !isMobile ? 'My Account' : undefined}
+          onClick={handleNavClick}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <UserCircle className="w-5 h-5 shrink-0" />
+          {(!collapsed || isMobile) && <span>My Account</span>}
+        </Link>
         <Button
           variant="ghost"
           size="sm"

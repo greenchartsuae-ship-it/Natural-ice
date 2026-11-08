@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ClientLiveMap from '@/components/delivery/ClientLiveMap';
+import BackButton from '@/components/shared/BackButton';
+import PullToRefresh from '@/components/shared/PullToRefresh';
+import { useBackButtonClose } from '@/hooks/useBackButtonClose';
 
 export default function MyOrders() {
   const { user } = useOutletContext();
@@ -20,6 +23,8 @@ export default function MyOrders() {
   const [showNameSetup, setShowNameSetup] = useState(!user?.full_name);
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const queryClient = useQueryClient();
+  useBackButtonClose(!!selected, () => setSelected(null));
 
   const handleSaveName = async () => {
     if (!nameInput.trim()) return;
@@ -41,8 +46,10 @@ export default function MyOrders() {
   const onTheWayOrders = orders.filter(o => o.status === 'on_the_way');
 
   return (
+    <PullToRefresh onRefresh={async () => { await queryClient.refetchQueries({ queryKey: ['my-orders'] }); }}>
     <div className="space-y-6">
       <div>
+        <BackButton to="/catalog" className="mb-2 -ml-1" />
         <h1 className="text-xl md:text-3xl font-bold">My Orders</h1>
         <p className="text-xs md:text-sm text-muted-foreground mt-1">Track your orders in real time</p>
       </div>
@@ -65,7 +72,7 @@ export default function MyOrders() {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className="text-sm font-bold text-primary shrink-0">AED {order.total_amount?.toFixed(2)}</span>
-                      <Button variant="outline" size="sm" onClick={() => setSelected(order)} className="gap-1 text-xs h-7 px-2">
+                      <Button variant="outline" size="sm" onClick={() => { setSelected(order); setMapOpen(m => ({ ...m, [order.id]: false })); }} className="gap-1 text-xs h-7 px-2">
                         <Eye className="w-3 h-3" /> Details
                       </Button>
                     </div>
@@ -120,7 +127,7 @@ export default function MyOrders() {
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <p className="text-sm md:text-lg font-bold text-primary">AED {order.total_amount?.toFixed(2)}</p>
-                    <Button variant="outline" size="sm" onClick={() => setSelected(order)} className="gap-1 text-xs h-7 px-2">
+                    <Button variant="outline" size="sm" onClick={() => { setSelected(order); setMapOpen(m => ({ ...m, [order.id]: false })); }} className="gap-1 text-xs h-7 px-2">
                       <Eye className="w-3 h-3" /> Details
                     </Button>
                   </div>
@@ -328,5 +335,6 @@ export default function MyOrders() {
         </DialogContent>
       </Dialog>
     </div>
+    </PullToRefresh>
   );
 }

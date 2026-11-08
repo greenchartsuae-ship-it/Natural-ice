@@ -15,11 +15,14 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import RouteOptimizer from '@/components/delivery/RouteOptimizer';
 import DriverLiveMap from '@/components/delivery/DriverLiveMap';
+import PullToRefresh from '@/components/shared/PullToRefresh';
+import { useBackButtonClose } from '@/hooks/useBackButtonClose';
 
 export default function DeliveryQueue() {
   const queryClient = useQueryClient();
   const { user } = useOutletContext();
   const [selected, setSelected] = useState(null);
+  useBackButtonClose(!!selected, () => setSelected(null));
   const [showRoute, setShowRoute] = useState(false);
   const needsSetup = user?.role === 'delivery' && !user?.phone && !user?.car_number;
   const [showProfile, setShowProfile] = useState(false);
@@ -56,6 +59,29 @@ export default function DeliveryQueue() {
         assigned_driver: user?.email || '',
       } : {};
       return base44.entities.Order.update(id, { status, ...(timestamps[status] || {}), ...driverInfo });
+    },
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['delivery-orders'] });
+      const now = new Date().toISOString();
+      const timestamps = {
+        collected:  { collected_at: now },
+        on_the_way: { on_the_way_at: now },
+        delivered:  { delivered_at: now },
+      };
+      const driverInfo = status === 'collected' ? {
+        driver_name: user?.display_name || user?.full_name || '',
+        driver_phone: user?.phone || '',
+        assigned_driver: user?.email || '',
+      } : {};
+      const patch = { status, ...(timestamps[status] || {}), ...driverInfo };
+      const prev = queryClient.getQueryData(['delivery-orders']);
+      queryClient.setQueryData(['delivery-orders'], (old) => old?.map(o => o.id === id ? { ...o, ...patch } : o));
+      setSelected(s => s && s.id === id ? { ...s, ...patch } : s);
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['delivery-orders'], ctx.prev);
+      toast.error('Failed to update status');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-orders'] });
@@ -128,7 +154,7 @@ export default function DeliveryQueue() {
           <div className="flex flex-col items-end gap-1 shrink-0">
             <span className="text-xs md:text-sm font-bold text-primary">AED {order.total_amount?.toFixed(2)}</span>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelected(order)}>
+              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setSelected(order)}>
                 <Eye className="w-3.5 h-3.5" />
               </Button>
               {action}
@@ -154,6 +180,7 @@ export default function DeliveryQueue() {
   );
 
   return (
+    <PullToRefresh onRefresh={async () => { await queryClient.refetchQueries({ queryKey: ['delivery-orders'] }); }}>
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -277,7 +304,32 @@ export default function DeliveryQueue() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{selected.client_email}</span></div>
                 <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{selected.delivery_phone || '—'}</span></div>
-                <div className="col-span-2"><span className="text-muted-foreground">Address:</span> <span className="font-medium">{selected.delivery_address || '—'}</span></div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Address:</span>{' '}
+                  <span className="font-medium">{selected.delivery_address || '—'}</span>
+                  {selected.delivery_address && (
+                    <div className="flex gap-2 mt-1.5">
+                      <a
+                        href={selected.delivery_lat && selected.delivery_lng
+                          ? `https://www.google.com/maps?q=${selected.delivery_lat},${selected.delivery_lng}`
+                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.delivery_address)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
+                      >
+                        🗺 Google Maps
+                      </a>
+                      <a
+                        href={selected.delivery_lat && selected.delivery_lng
+                          ? `https://waze.com/ul?ll=${selected.delivery_lat},${selected.delivery_lng}&navigate=yes`
+                          : `https://waze.com/ul?q=${encodeURIComponent(selected.delivery_address)}&navigate=yes`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-2 py-1 rounded bg-sky-50 text-sky-700 hover:bg-sky-100 font-medium"
+                      >
+                        🚗 Waze
+                      </a>
+                    </div>
+                  )}
+                </div>
                 {selected.delivery_date && <div><span className="text-muted-foreground">Delivery Date:</span> <span className="font-medium">{selected.delivery_date}</span></div>}
               </div>
               {selected.notes && <p className="text-sm bg-muted rounded-lg p-3">{selected.notes}</p>}
@@ -305,5 +357,6 @@ export default function DeliveryQueue() {
         </DialogContent>
       </Dialog>
     </div>
+    </PullToRefresh>
   );
 }

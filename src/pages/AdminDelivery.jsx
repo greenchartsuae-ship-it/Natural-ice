@@ -52,8 +52,19 @@ export default function AdminDelivery() {
     if (!form.email) return;
     setInviting(true);
     try {
-      await base44.users.inviteUser(form.email, 'delivery');
-      // If user already exists or just created, update their phone
+      // Platform inviteUser only accepts 'user' or 'admin' — invite as 'user', then set delivery role
+      await base44.users.inviteUser(form.email, 'user');
+      // Try to find the newly created user and update their role to 'delivery'
+      try {
+        const allUsers = await base44.entities.User.list();
+        const newUser = allUsers.find(u => u.email?.toLowerCase() === form.email.toLowerCase());
+        if (newUser) {
+          await base44.entities.User.update(newUser.id, { role: 'delivery' });
+        }
+      } catch (updateErr) {
+        // Role update can fail if the user record isn't created yet — they can be assigned manually later
+        console.warn('Could not auto-assign delivery role:', updateErr.message);
+      }
       toast.success(`Invitation sent to ${form.email}. They will log in and appear here as a delivery user.`);
       setShowInvite(false);
       setForm({ email: '', full_name: '', phone: '' });

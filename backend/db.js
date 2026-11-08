@@ -112,6 +112,10 @@ async function init() {
   // Lightweight migrations for columns added after initial release.
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS price_on_request INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee REAL DEFAULT 0`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS exclusive_client_email TEXT`);
+  await pool.query(`ALTER TABLE special_clients ADD COLUMN IF NOT EXISTS description TEXT`);
+  await pool.query(`ALTER TABLE special_client_products ADD COLUMN IF NOT EXISTS description TEXT`);
 }
 
 module.exports = { pool, run, get, all, init };

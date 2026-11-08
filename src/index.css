@@ -82,7 +82,16 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
   body {
     @apply bg-background text-foreground font-inter;
+  }
+  /* Prevent text selection on native UI controls (WebView compatibility) */
+  button, a, nav, header, [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }

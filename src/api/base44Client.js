@@ -70,7 +70,7 @@ export const base44 = {
     setPassword: (id, password) => request(`/users/${id}/set-password`, { method: 'POST', body: JSON.stringify({ password }) }),
   },
   functions: {
-    invoke: (name, payload) => request(`/functions/${name}`, { method: 'POST', body: JSON.stringify(payload) }),
+    invoke: async (name, payload) => ({ data: await request(`/functions/${name}`, { method: 'POST', body: JSON.stringify(payload || {}) }) }),
   },
   public: {
     listProducts: () => request('/public/products'),

@@ -10,6 +10,7 @@ import { formatDubai } from '@/lib/formatDubaiTime';
 import { Factory, CheckCircle, Play, Eye, Package, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import PullToRefresh from '@/components/shared/PullToRefresh';
 
 export default function ProductionQueue() {
   const queryClient = useQueryClient();
@@ -30,9 +31,26 @@ export default function ProductionQueue() {
       };
       return base44.entities.Order.update(id, { status, ...(timestamps[status] || {}) });
     },
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['production-orders'] });
+      const now = new Date().toISOString();
+      const timestamps = {
+        approved:  { approved_at: now },
+        preparing: { preparing_at: now },
+        ready:     { ready_at: now },
+      };
+      const patch = { status, ...(timestamps[status] || {}) };
+      const prev = queryClient.getQueryData(['production-orders']);
+      queryClient.setQueryData(['production-orders'], (old) => old?.map(o => o.id === id ? { ...o, ...patch } : o));
+      setSelected(s => s && s.id === id ? { ...s, ...patch } : s);
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['production-orders'], ctx.prev);
+      toast.error('Failed to update status');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['production-orders'] });
-      if (selected) setSelected(prev => ({ ...prev, status: prev._nextStatus }));
       toast.success('Status updated');
     },
   });
@@ -66,7 +84,7 @@ export default function ProductionQueue() {
           <div className="flex flex-col items-end gap-1 shrink-0">
             <span className="text-xs md:text-sm font-bold text-primary">AED {order.total_amount?.toFixed(2)}</span>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelected(order)}>
+              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setSelected(order)}>
                 <Eye className="w-3.5 h-3.5" />
               </Button>
               {action}
@@ -92,6 +110,7 @@ export default function ProductionQueue() {
   );
 
   return (
+    <PullToRefresh onRefresh={async () => { await queryClient.refetchQueries({ queryKey: ['production-orders'] }); }}>
     <div className="space-y-8">
       <div>
         <h1 className="text-xl md:text-3xl font-bold flex items-center gap-2 md:gap-3">
@@ -176,5 +195,6 @@ export default function ProductionQueue() {
         </DialogContent>
       </Dialog>
     </div>
+    </PullToRefresh>
   );
 }

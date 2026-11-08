@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { UserPlus, Users, Mail, Search, Trash2, Pencil, Check, X, KeyRound, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -32,6 +33,7 @@ export default function AdminClients() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePassword, setInvitePassword] = useState('');
+  const [inviteAsAdmin, setInviteAsAdmin] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -88,11 +90,12 @@ export default function AdminClients() {
     if (!inviteEmail) return;
     setInviting(true);
     try {
-      const res = await base44.users.inviteUser(inviteEmail, 'user', invitePassword || undefined);
+      const res = await base44.users.inviteUser(inviteEmail, inviteAsAdmin ? 'admin' : 'user', invitePassword || undefined);
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setInviteOpen(false);
       setInviteEmail('');
       setInvitePassword('');
+      setInviteAsAdmin(false);
       setResultInfo({ email: res.email, password: res.temp_password });
       setResultOpen(true);
     } catch (e) {
@@ -277,6 +280,13 @@ export default function AdminClients() {
                 placeholder="Leave blank to auto-generate"
                 type="text"
               />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Create as Administrator</p>
+                <p className="text-xs text-muted-foreground">Grants full access: dashboard, all users, clients, orders and client TRN.</p>
+              </div>
+              <Switch checked={inviteAsAdmin} onCheckedChange={setInviteAsAdmin} />
             </div>
             <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
               Set a password yourself, or leave it blank and we'll generate one for you. Either way, you'll see the final password after creating the account so you can share it with the user directly.

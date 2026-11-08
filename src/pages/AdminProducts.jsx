@@ -115,12 +115,7 @@ export default function AdminProducts() {
   };
 
   const handleSave = () => {
-    saveMutation.mutate({
-      ...form,
-      price: form.price_on_request ? 0 : parseFloat(form.price) || 0,
-      price_on_request: !!form.price_on_request,
-      min_order_quantity: parseInt(form.min_order_quantity) || 1,
-    });
+    saveMutation.mutate({ ...form, price: form.price_on_request ? 0 : parseFloat(form.price), min_order_quantity: parseInt(form.min_order_quantity) || 1 });
   };
 
   return (
@@ -192,9 +187,7 @@ export default function AdminProducts() {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold truncate">{product.name}</p>
-                            <p className="text-xs text-muted-foreground capitalize">
-                              {product.category?.replace(/_/g, ' ')} · {product.price_on_request ? 'As per Request' : `AED ${product.price}/${product.unit}`}
-                            </p>
+                            <p className="text-xs text-muted-foreground capitalize">{product.category?.replace(/_/g, ' ')} · AED {product.price}/{product.unit}</p>
                           </div>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${product.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                             {product.is_active !== false ? 'Active' : 'Inactive'}
@@ -243,11 +236,7 @@ export default function AdminProducts() {
                 </div>
                 <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{product.description}</p>
                 <div className="flex items-center justify-between mt-4">
-                  {product.price_on_request ? (
-                    <p className="text-lg font-bold text-amber-600">As per Request</p>
-                  ) : (
-                    <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-sm font-normal text-muted-foreground">/{product.unit}</span></p>
-                  )}
+                  <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-sm font-normal text-muted-foreground">/{product.unit}</span></p>
                   <div className="flex gap-1 items-center">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(product)}>
                       <Pencil className="w-4 h-4" />
@@ -300,32 +289,31 @@ export default function AdminProducts() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <Label className="mb-0">Price</Label>
-                  <div className="flex rounded-md overflow-hidden border text-xs">
+                <Label>Price (AED)</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setForm({...form, price_on_request: false})}
-                      className={`px-2 py-1 font-medium transition-colors ${!form.price_on_request ? 'bg-primary text-primary-foreground' : 'bg-transparent text-muted-foreground hover:bg-muted'}`}
+                      onClick={() => setForm({...form, price: '', price_on_request: false})}
+                      className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${!form.price_on_request ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'}`}
                     >
                       Number
                     </button>
                     <button
                       type="button"
-                      onClick={() => setForm({...form, price_on_request: true})}
-                      className={`px-2 py-1 font-medium transition-colors border-l ${form.price_on_request ? 'bg-primary text-primary-foreground' : 'bg-transparent text-muted-foreground hover:bg-muted'}`}
+                      onClick={() => setForm({...form, price: 0, price_on_request: true})}
+                      className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${form.price_on_request ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'}`}
                     >
                       As per Request
                     </button>
                   </div>
+                  {!form.price_on_request && (
+                    <Input type="number" step="0.01" value={form.price} onChange={e => setForm({...form, price: e.target.value})} placeholder="0.00" />
+                  )}
+                  {form.price_on_request && (
+                    <div className="h-9 flex items-center px-3 rounded-md border border-input bg-muted text-sm text-muted-foreground">As per Request</div>
+                  )}
                 </div>
-                {form.price_on_request ? (
-                  <div className="h-9 flex items-center px-3 rounded-md border bg-muted text-sm text-amber-600 font-medium">
-                    As per Request
-                  </div>
-                ) : (
-                  <Input type="number" step="0.01" value={form.price} onChange={e => setForm({...form, price: e.target.value})} placeholder="0.00" />
-                )}
               </div>
               <div>
                 <Label>Min Order Qty</Label>

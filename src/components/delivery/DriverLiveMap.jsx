@@ -1,61 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import { base44 } from '@/api/base44Client';
-import { Navigation, MapPin } from 'lucide-react';
-
-// Fix leaflet default icon
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-const driverIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:36px;height:36px;border-radius:50%;
-    background:#1d4ed8;border:3px solid white;
-    box-shadow:0 2px 8px rgba(0,0,0,0.4);
-    display:flex;align-items:center;justify-content:center;
-  ">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="3 11 22 2 13 21 11 13 3 11"/>
-    </svg>
-  </div>`,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
-
-const destIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:32px;height:32px;border-radius:50%;
-    background:#dc2626;border:3px solid white;
-    box-shadow:0 2px 8px rgba(0,0,0,0.4);
-    display:flex;align-items:center;justify-content:center;
-  ">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-  </div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-});
-
-function FitBounds({ positions }) {
-  const map = useMap();
-  useEffect(() => {
-    if (positions.length >= 2) {
-      map.fitBounds(positions, { padding: [40, 40] });
-    } else if (positions.length === 1) {
-      map.setView(positions[0], 14);
-    }
-  }, [positions.map(p => p.join(',')).join('|')]);
-  return null;
-}
+import { Navigation, MapPin, ExternalLink } from 'lucide-react';
 
 export default function DriverLiveMap({ order }) {
   const [driverPos, setDriverPos] = useState(null);
@@ -63,9 +8,9 @@ export default function DriverLiveMap({ order }) {
   const watchId = useRef(null);
   const saveTimer = useRef(null);
 
-  const destPos = order.delivery_lat && order.delivery_lng
-    ? [order.delivery_lat, order.delivery_lng]
-    : null;
+  const destLat = order.delivery_lat;
+  const destLng = order.delivery_lng;
+  const hasDest = destLat && destLng;
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -80,7 +25,6 @@ export default function DriverLiveMap({ order }) {
         setDriverPos([lat, lng]);
         setGpsError(null);
 
-        // Throttle saves to DB: save at most every 10s
         if (!saveTimer.current) {
           saveTimer.current = setTimeout(() => {
             base44.entities.Order.update(order.id, {
@@ -91,7 +35,7 @@ export default function DriverLiveMap({ order }) {
           }, 10000);
         }
       },
-      (err) => setGpsError('Unable to get GPS location'),
+      () => setGpsError('Unable to get GPS location'),
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
 
@@ -101,8 +45,25 @@ export default function DriverLiveMap({ order }) {
     };
   }, [order.id]);
 
-  const positions = [driverPos, destPos].filter(Boolean);
-  const center = driverPos || destPos || [25.2048, 55.2708]; // fallback to Dubai
+  const driverLat = driverPos ? driverPos[0] : null;
+  const driverLng = driverPos ? driverPos[1] : null;
+
+  const centerLat = driverLat || destLat || 25.2048;
+  const centerLng = driverLng || destLng || 55.2708;
+
+  // Use directions embed when both points available — shows route + live driver pin
+  // Add timestamp to key so iframe reloads when driver position updates
+  const embedUrl = driverLat && hasDest
+    ? `https://maps.google.com/maps?saddr=${driverLat},${driverLng}&daddr=${destLat},${destLng}&output=embed`
+    : `https://maps.google.com/maps?q=${centerLat},${centerLng}&z=15&output=embed`;
+
+  const iframeKey = driverLat ? `${Math.round(driverLat * 5000)},${Math.round(driverLng * 5000)}` : 'default';
+
+  const directionsUrl = driverPos && hasDest
+    ? `https://www.google.com/maps/dir/${driverLat},${driverLng}/${destLat},${destLng}`
+    : hasDest
+    ? `https://www.google.com/maps?q=${destLat},${destLng}`
+    : null;
 
   return (
     <div className="rounded-xl overflow-hidden border shadow-sm">
@@ -111,49 +72,32 @@ export default function DriverLiveMap({ order }) {
           <Navigation className="w-3.5 h-3.5" />
           Live Tracking — {order.client_name}
         </span>
-        {driverPos && (
-          <span className="text-green-600 font-semibold">● GPS Active</span>
-        )}
-        {gpsError && (
-          <span className="text-red-500">{gpsError}</span>
-        )}
+        <div className="flex items-center gap-3">
+          {driverPos && <span className="text-green-600 font-semibold">● GPS Active</span>}
+          {gpsError && <span className="text-red-500">{gpsError}</span>}
+          {directionsUrl && (
+            <a href={directionsUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 text-indigo-600 hover:underline">
+              <ExternalLink className="w-3 h-3" /> Open in Google Maps
+            </a>
+          )}
+        </div>
       </div>
 
       <div style={{ height: 280 }}>
-        <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={true}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="© OpenStreetMap contributors"
-          />
-          <FitBounds positions={positions} />
-
-          {driverPos && (
-            <Marker position={driverPos} icon={driverIcon}>
-              <Popup>📍 You are here</Popup>
-            </Marker>
-          )}
-
-          {destPos && (
-            <Marker position={destPos} icon={destIcon}>
-              <Popup>
-                <div className="text-xs">
-                  <p className="font-semibold">{order.client_name}</p>
-                  <p>{order.delivery_address}</p>
-                </div>
-              </Popup>
-            </Marker>
-          )}
-
-          {driverPos && destPos && (
-            <Polyline
-              positions={[driverPos, destPos]}
-              pathOptions={{ color: '#1d4ed8', weight: 3, dashArray: '8 6', opacity: 0.8 }}
-            />
-          )}
-        </MapContainer>
+        <iframe
+          key={iframeKey}
+          title="Google Maps Driver"
+          src={embedUrl}
+          width="100%"
+          height="100%"
+          style={{ border: 0 }}
+          allowFullScreen=""
+          referrerPolicy="no-referrer-when-downgrade"
+        />
       </div>
 
-      {!destPos && (
+      {!hasDest && (
         <div className="px-3 py-2 bg-amber-50 border-t text-xs text-amber-700 flex items-center gap-1.5">
           <MapPin className="w-3 h-3" /> No delivery coordinates — client did not share location
         </div>

@@ -37,7 +37,7 @@ export default function SpecialClientsTRN() {
 
   const { data: users } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => base44.entities.User.list(null, 500),
   });
 
   const createMutation = useMutation({
@@ -88,6 +88,7 @@ export default function SpecialClientsTRN() {
   const handleEdit = (client) => {
     setEditingClient(client);
     setFormData({ client_email: client.client_email, trn: client.trn || '', company_name: client.company_name || '' });
+    setOpen(true);
   };
 
   const specialClientEmails = specialClients?.map(c => c.client_email) || [];
@@ -102,7 +103,7 @@ export default function SpecialClientsTRN() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Special Client TRN Management</CardTitle>
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditingClient(null); }}>
               <DialogTrigger asChild>
                 <Button onClick={() => { setEditingClient(null); setFormData({ client_email: '', trn: '', company_name: '' }); }}>
                   <Plus className="w-4 h-4 mr-2" /> Add TRN
@@ -171,51 +172,76 @@ export default function SpecialClientsTRN() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client Email</TableHead>
-                <TableHead>Company Name</TableHead>
-                <TableHead>TRN Code</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {specialClients?.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell>{client.client_email}</TableCell>
-                  <TableCell>{client.company_name || '-'}</TableCell>
-                  <TableCell className="font-mono">{client.trn || '-'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(client)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(client.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(!specialClients || specialClients.length === 0) && (
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    No special client TRN codes added yet
-                  </TableCell>
+                  <TableHead>Client Email</TableHead>
+                  <TableHead>Company Name</TableHead>
+                  <TableHead>TRN Code</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {specialClients?.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell>{client.client_email}</TableCell>
+                    <TableCell>{client.company_name || '-'}</TableCell>
+                    <TableCell className="font-mono">{client.trn || '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(client)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!specialClients || specialClients.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      No special client TRN codes added yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {specialClients?.length > 0 ? (
+              specialClients.map((client) => (
+                <Card key={client.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{client.client_email}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{client.company_name || '-'}</p>
+                        <p className="text-xs font-mono mt-1">{client.trn || '-'}</p>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => handleEdit(client)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive hover:text-destructive" onClick={() => handleDelete(client.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card className="py-10 text-center">
+                <p className="text-sm text-muted-foreground">No special client TRN codes added yet</p>
+              </Card>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

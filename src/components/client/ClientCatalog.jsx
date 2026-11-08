@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ShoppingCart, Plus, Minus, Package, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import OrderDialog from './OrderDialog';
+import { useBackButtonClose } from '@/hooks/useBackButtonClose';
 
 export default function ClientCatalog({ user }) {
   const [cart, setCart] = useState({});
@@ -16,13 +17,14 @@ export default function ClientCatalog({ user }) {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [orderOpen, setOrderOpen] = useState(false);
   const queryClient = useQueryClient();
+  useBackButtonClose(orderOpen, () => setOrderOpen(false));
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list(),
   });
 
-  const activeProducts = products.filter(p => p.is_active !== false);
+  const activeProducts = products.filter(p => p.is_active !== false && !p.exclusive_client_email);
   const filtered = activeProducts.filter(p => {
     const matchSearch = p.name?.toLowerCase().includes(search.toLowerCase());
     const matchCategory = categoryFilter === 'all' || p.category === categoryFilter;
@@ -32,9 +34,13 @@ export default function ClientCatalog({ user }) {
   const cartCount = Object.values(cart).reduce((s, q) => s + q, 0);
 
   const updateCart = (productId, delta) => {
+    const product = products.find(p => p.id === productId);
+    const minQty = product?.min_order_quantity || 1;
     setCart(prev => {
-      const newQty = (prev[productId] || 0) + delta;
-      if (newQty <= 0) {
+      const currentQty = prev[productId] || 0;
+      // When adding for the first time, jump to min quantity
+      const newQty = currentQty === 0 && delta > 0 ? minQty : currentQty + delta;
+      if (newQty <= 0 || newQty < minQty) {
         const { [productId]: _, ...rest } = prev;
         return rest;
       }
@@ -47,7 +53,7 @@ export default function ClientCatalog({ user }) {
     return product ? { product, quantity: qty } : null;
   }).filter(Boolean);
 
-  const cartTotal = cartItems.reduce((s, item) => s + (item.product.price_on_request ? 0 : item.product.price * item.quantity), 0);
+  const cartTotal = cartItems.reduce((s, item) => s + (item.product.price * item.quantity), 0);
 
   const createOrderMutation = useMutation({
     mutationFn: (orderData) => base44.entities.Order.create(orderData),
@@ -60,13 +66,17 @@ export default function ClientCatalog({ user }) {
   });
 
   const handleOrder = (deliveryInfo) => {
+    const invalid = cartItems.find(item => item.quantity < (item.product.min_order_quantity || 1));
+    if (invalid) {
+      toast.error(`Minimum order for ${invalid.product.name} is ${invalid.product.min_order_quantity} ${invalid.product.unit}`);
+      return;
+    }
     const items = cartItems.map(item => ({
       product_id: item.product.id,
       product_name: item.product.name,
       quantity: item.quantity,
-      unit_price: item.product.price_on_request ? null : item.product.price,
-      total: item.product.price_on_request ? null : item.product.price * item.quantity,
-      price_on_request: !!item.product.price_on_request,
+      unit_price: item.product.price,
+      total: item.product.price * item.quantity,
     }));
     createOrderMutation.mutate({
       client_email: user.email,
@@ -146,21 +156,21 @@ export default function ClientCatalog({ user }) {
                   <Badge variant="outline" className="capitalize text-xs">{product.category?.replace('_', ' ')}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
+                {product.min_order_quantity > 1 && (
+                  <p className="text-xs text-amber-600 mb-2">Min. order: {product.min_order_quantity} {product.unit}</p>
+                )}
                 <div className="flex items-center justify-between">
-                  {product.price_on_request ? (
-                    <p className="text-lg font-bold text-amber-600">As per Request</p>
-                  ) : (
-                    <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
-                  )}
-                  {product.price_on_request ? (
-                    <Badge variant="outline" className="text-amber-600 border-amber-300">Contact Admin</Badge>
-                  ) : cart[product.id] ? (
+                  {product.price_on_request
+                    ? <p className="text-lg font-bold text-amber-600">As per Request</p>
+                    : <p className="text-2xl font-bold text-primary">AED {product.price}<span className="text-xs font-normal text-muted-foreground">/{product.unit}</span></p>
+                  }
+                  {cart[product.id] ? (
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCart(product.id, -1)}>
+                      <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => updateCart(product.id, -1)}>
                         <Minus className="w-3 h-3" />
                       </Button>
                       <span className="w-8 text-center font-semibold">{cart[product.id]}</span>
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCart(product.id, 1)}>
+                      <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => updateCart(product.id, 1)}>
                         <Plus className="w-3 h-3" />
                       </Button>
                     </div>

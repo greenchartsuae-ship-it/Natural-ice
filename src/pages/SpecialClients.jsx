@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Trash2, Star, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Star, Package, ChevronDown, ChevronUp, Lock, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function SpecialClients() {
@@ -15,11 +15,13 @@ export default function SpecialClients() {
   const [selectedClient, setSelectedClient] = useState('');
   const [selectedProducts, setSelectedProducts] = useState({});
   const [collapsed, setCollapsed] = useState({});
+  const [showExclusive, setShowExclusive] = useState(false);
+  const [newProduct, setNewProduct] = useState({ name: '', category: 'other', unit: 'piece', price: '', image_url: '' });
   const queryClient = useQueryClient();
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => base44.entities.User.list(null, 500),
   });
 
   const { data: products = [] } = useQuery({
@@ -42,6 +44,11 @@ export default function SpecialClients() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['special-assignments'] }),
   });
 
+  const createProductMutation = useMutation({
+    mutationFn: (data) => base44.entities.Product.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  });
+
   // When client is selected, pre-populate selectedProducts from existing assignments
   const handleClientSelect = (email) => {
     setSelectedClient(email);
@@ -55,6 +62,29 @@ export default function SpecialClients() {
   const existingAssignmentMap = Object.fromEntries(
     assignments.filter(a => a.client_email === selectedClient).map(a => [a.product_id, a.id])
   );
+
+  // Only show shared products + products exclusive to the selected client (hide other clients' exclusives)
+  const assignableProducts = products.filter(p => !p.exclusive_client_email || p.exclusive_client_email === selectedClient);
+
+  const handleCreateExclusive = async () => {
+    if (!selectedClient) { toast.error('Select a client first'); return; }
+    if (!newProduct.name.trim() || !newProduct.price) { toast.error('Enter a name and price'); return; }
+    const price = parseFloat(newProduct.price);
+    const product = await createProductMutation.mutateAsync({
+      name: newProduct.name.trim(),
+      category: newProduct.category,
+      unit: newProduct.unit,
+      price,
+      image_url: newProduct.image_url || undefined,
+      exclusive_client_email: selectedClient,
+      is_active: true,
+    });
+    await createMutation.mutateAsync({ client_email: selectedClient, product_id: product.id, special_price: price });
+    toast.success('Exclusive product created and assigned');
+    setSelectedProducts(prev => ({ ...prev, [product.id]: price.toString() }));
+    setNewProduct({ name: '', category: 'other', unit: 'piece', price: '', image_url: '' });
+    setShowExclusive(false);
+  };
 
   const handleAssignProducts = async () => {
     const toProcess = Object.entries(selectedProducts).filter(([_, price]) => price);
@@ -198,11 +228,60 @@ export default function SpecialClients() {
             </div>
 
             {selectedClient && (
-              <div>
+              <div className="space-y-3">
+                {!showExclusive ? (
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowExclusive(true)}>
+                    <Lock className="w-4 h-4" /> Create exclusive product for this client
+                  </Button>
+                ) : (
+                  <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium flex items-center gap-1.5"><Lock className="w-4 h-4" /> New exclusive product</p>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowExclusive(false)}><X className="w-4 h-4" /></Button>
+                    </div>
+                    <Input placeholder="Product name" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select value={newProduct.category} onValueChange={v => setNewProduct({ ...newProduct, category: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="crushed_ice">Crushed Ice</SelectItem>
+                          <SelectItem value="custom_ice">Custom Ice</SelectItem>
+                          <SelectItem value="diamond_ice">Diamond Ice</SelectItem>
+                          <SelectItem value="dry_ice">Dry Ice</SelectItem>
+                          <SelectItem value="ice_ball">Ice Ball</SelectItem>
+                          <SelectItem value="ice_cream">Ice Cream</SelectItem>
+                          <SelectItem value="ice_cube">Ice Cube</SelectItem>
+                          <SelectItem value="large_ice_cube">Large Ice Cubes</SelectItem>
+                          <SelectItem value="long_ice_cube">Long Ice Cube</SelectItem>
+                          <SelectItem value="luxury_ice">Luxury Ice</SelectItem>
+                          <SelectItem value="tube_ice">Tube Ice</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={newProduct.unit} onValueChange={v => setNewProduct({ ...newProduct, unit: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kg">kg</SelectItem>
+                          <SelectItem value="piece">piece</SelectItem>
+                          <SelectItem value="box">box</SelectItem>
+                          <SelectItem value="pack">pack</SelectItem>
+                          <SelectItem value="liter">liter</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input type="number" step="0.01" placeholder="Price (AED)" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} />
+                    <Input placeholder="Image URL (optional)" value={newProduct.image_url} onChange={e => setNewProduct({ ...newProduct, image_url: e.target.value })} />
+                    <Button className="w-full gap-2" disabled={createProductMutation.isPending || createMutation.isPending} onClick={handleCreateExclusive}>
+                      {(createProductMutation.isPending || createMutation.isPending) ? 'Creating...' : 'Create & Assign'}
+                    </Button>
+                  </div>
+                )}
+                <div>
                 <Label>Select Products & Set Prices</Label>
                 <div className="grid gap-3 mt-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-muted/30">
-                  {products.map(p => {
+                  {assignableProducts.map(p => {
                     const isExisting = !!existingAssignmentMap[p.id];
+                    const isExclusive = p.exclusive_client_email === selectedClient;
                     return (
                       <div key={p.id} className={`flex items-center gap-3 p-2 rounded-lg border hover:shadow-sm transition-shadow ${isExisting ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}>
                         <input
@@ -220,8 +299,9 @@ export default function SpecialClients() {
                           className="w-4 h-4"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium text-sm">{p.name}</p>
+                            {isExclusive && <span className="text-xs bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Lock className="w-3 h-3" /> exclusive</span>}
                             {isExisting && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">assigned</span>}
                           </div>
                           <p className="text-xs text-muted-foreground">Regular: AED {p.price}/{p.unit}</p>
@@ -239,6 +319,7 @@ export default function SpecialClients() {
                       </div>
                     );
                   })}
+                </div>
                 </div>
               </div>
             )}

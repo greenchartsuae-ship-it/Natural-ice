@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /clients
+Disallow: /orders
+Disallow: /special-clients
+Disallow: /admin-delivery
+Disallow: /special-clients-trn
+Disallow: /production
+Disallow: /delivery
+Disallow: /my-orders
+Disallow: /catalog
+Disallow: /track
+
+Sitemap: https://naturalice.ae/sitemap.xml

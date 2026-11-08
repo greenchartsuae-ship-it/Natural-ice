@@ -184,7 +184,99 @@ app.post('/api/functions/updateUserName', auth, requireAdmin, ah(async (req, res
   res.json({ ok: true });
 }));
 
+// Guest order tracking by phone/email (mirrors the old trackGuestOrders function).
+app.post('/api/functions/trackGuestOrders', ah(async (req, res) => {
+  const phone = String((req.body && req.body.phone) || '').trim();
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  if (!phone && !email) return res.status(400).json({ error: 'Phone or email is required' });
+  const rows = [];
+  if (email) rows.push(...await db.all('SELECT * FROM orders WHERE LOWER(client_email) = ? ORDER BY created_date DESC LIMIT 50', [email]));
+  if (phone) rows.push(...await db.all('SELECT * FROM orders WHERE delivery_phone = ? ORDER BY created_date DESC LIMIT 50', [phone]));
+  const map = new Map();
+  rows.forEach(o => map.set(o.id, o));
+  const orders = Array.from(map.values())
+    .sort((a, b) => String(b.created_date || '').localeCompare(String(a.created_date || '')))
+    .map(o => {
+      const s = serializeRow('orders', o);
+      return {
+        id: s.id, status: s.status, total_amount: s.total_amount, delivery_fee: s.delivery_fee, items: s.items,
+        delivery_address: s.delivery_address, delivery_phone: s.delivery_phone, delivery_date: s.delivery_date,
+        client_name: s.client_name, created_date: s.created_date, driver_name: s.driver_name, driver_phone: s.driver_phone,
+        approved_at: s.approved_at, preparing_at: s.preparing_at, ready_at: s.ready_at,
+        collected_at: s.collected_at, on_the_way_at: s.on_the_way_at, delivered_at: s.delivered_at,
+      };
+    });
+  res.json({ orders });
+}));
+
+// Users can delete their own account.
+app.post('/api/functions/deleteUserAccount', auth, ah(async (req, res) => {
+  if (req.user.role === 'admin') return res.status(403).json({ error: 'Admin accounts cannot be deleted here' });
+  await db.run('DELETE FROM users WHERE id = ?', [req.user.id]);
+  res.clearCookie('token');
+  res.json({ success: true });
+}));
+
 // ---------- Generic entity CRUD ----------
+
+// Optional auth: attaches req.user when a valid token cookie exists, never rejects.
+async function optionalAuth(req, res, next) {
+  try {
+    const token = req.cookies.token;
+    if (token) {
+      const payload = jwt.verify(token, JWT_SECRET);
+      const user = await db.get('SELECT * FROM users WHERE id = ?', [payload.id]);
+      if (user) req.user = user;
+    }
+  } catch (e) { /* treat as guest */ }
+  next();
+}
+
+// Drop any client-supplied fields that are not real columns (the original
+// Base44 data model was schemaless, so forms may send extra fields).
+const columnCache = {};
+async function tableColumns(table) {
+  if (!columnCache[table]) {
+    const rows = await db.all('SELECT column_name FROM information_schema.columns WHERE table_name = ?', [table]);
+    columnCache[table] = new Set(rows.map(r => r.column_name));
+  }
+  return columnCache[table];
+}
+async function pickColumns(table, body) {
+  const cols = await tableColumns(table);
+  const out = {};
+  for (const k of Object.keys(body)) {
+    if (cols.has(k)) out[k] = body[k];
+  }
+  return out;
+}
+
+// Build a WHERE clause from a Base44-style filter ({a:1}, {a:[1,2]}, {$or:[{..},{..}]}).
+function buildWhere(filterObj, cols, params) {
+  const parts = [];
+  for (const [k, v] of Object.entries(filterObj || {})) {
+    if (k === '$or' && Array.isArray(v)) {
+      const subs = v.map(sub => buildWhere(sub, cols, params)).filter(Boolean);
+      if (subs.length) parts.push('(' + subs.join(' OR ') + ')');
+      continue;
+    }
+    if (!cols.has(k)) { parts.push('1 = 0'); continue; }
+    if (Array.isArray(v)) {
+      if (!v.length) { parts.push('1 = 0'); continue; }
+      parts.push(`${k} IN (${v.map(() => '?').join(', ')})`);
+      v.forEach(x => params.push(typeof x === 'boolean' ? (x ? 1 : 0) : x));
+    } else if (v && typeof v === 'object' && '$regex' in v) {
+      parts.push(`${k} ILIKE ?`);
+      params.push(`%${String(v.$regex).replace(/[.^$*+?()[\]{}|\\]/g, '')}%`);
+    } else if (v === null) {
+      parts.push(`${k} IS NULL`);
+    } else {
+      parts.push(`${k} = ?`);
+      params.push(typeof v === 'boolean' ? (v ? 1 : 0) : v);
+    }
+  }
+  return parts.join(' AND ');
+}
 
 const ENTITY_TABLES = {
   Product: 'products',
@@ -251,30 +343,41 @@ function getTable(entityName, res) {
 }
 
 // List / filter: GET /api/entities/:entity?sort=-created_date&limit=200&filter={"status":"pending"}
-app.get('/api/entities/:entity', auth, ah(async (req, res) => {
+app.get('/api/entities/:entity', optionalAuth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
+  // Only the product catalog is readable without logging in.
+  if (!req.user && table !== 'products') return res.status(401).json({ error: 'unauthenticated' });
+  const cols = await tableColumns(table);
   let sql = `SELECT * FROM ${table}`;
   const params = [];
+  let filterObj = {};
   if (req.query.filter) {
-    let filterObj = {};
     try { filterObj = JSON.parse(req.query.filter); } catch (e) {}
-    const keys = Object.keys(filterObj);
-    if (keys.length) {
-      sql += ' WHERE ' + keys.map(k => `${k} = ?`).join(' AND ');
-      keys.forEach(k => params.push(filterObj[k]));
+  }
+  const where = [];
+  const w = buildWhere(filterObj, cols, params);
+  if (w) where.push(w);
+  // Exclusive (client-specific) products are hidden from everyone but admins and their owner.
+  if (table === 'products' && (!req.user || req.user.role !== 'admin')) {
+    if (req.user) {
+      where.push("(exclusive_client_email IS NULL OR exclusive_client_email = '' OR LOWER(exclusive_client_email) = ?)");
+      params.push(String(req.user.email).toLowerCase());
+    } else {
+      where.push("(exclusive_client_email IS NULL OR exclusive_client_email = '')");
     }
   }
+  if (where.length) sql += ' WHERE ' + where.join(' AND ');
   let sort = req.query.sort || '';
   if (sort) {
     const desc = sort.startsWith('-');
     const col = desc ? sort.slice(1) : sort;
-    sql += ` ORDER BY ${col} ${desc ? 'DESC' : 'ASC'}`;
+    if (cols.has(col)) sql += ` ORDER BY ${col} ${desc ? 'DESC' : 'ASC'}`;
   } else {
     sql += ' ORDER BY created_date DESC';
   }
   if (req.query.limit) {
-    sql += ` LIMIT ${parseInt(req.query.limit, 10)}`;
+    sql += ` LIMIT ${parseInt(req.query.limit, 10) || 100}`;
   }
   const rows = await db.all(sql, params);
   res.json(rows.map(r => serializeRow(table, r)));
@@ -283,7 +386,7 @@ app.get('/api/entities/:entity', auth, ah(async (req, res) => {
 app.post('/api/entities/:entity', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
-  const body = deserializeBody(table, req.body || {});
+  const body = await pickColumns(table, deserializeBody(table, req.body || {}));
   const id = uuidv4();
   const cols = Object.keys(body);
   const allCols = ['id', ...cols, 'created_date', 'updated_date'];
@@ -297,7 +400,7 @@ app.post('/api/entities/:entity', auth, ah(async (req, res) => {
 app.put('/api/entities/:entity/:id', auth, ah(async (req, res) => {
   const table = getTable(req.params.entity, res);
   if (!table) return;
-  const body = deserializeBody(table, req.body || {});
+  const body = await pickColumns(table, deserializeBody(table, req.body || {}));
   const cols = Object.keys(body);
   if (cols.length) {
     const setSql = cols.map(c => `${c} = ?`).join(', ') + ', updated_date = ?';
@@ -317,12 +420,13 @@ app.delete('/api/entities/:entity/:id', auth, ah(async (req, res) => {
 
 // Public: list active products without auth (storefront) & create guest orders
 app.get('/api/public/products', ah(async (req, res) => {
-  const rows = await db.all('SELECT * FROM products ORDER BY sort_order ASC');
+  const rows = await db.all("SELECT * FROM products WHERE exclusive_client_email IS NULL OR exclusive_client_email = '' ORDER BY sort_order ASC");
   res.json(rows.map(r => serializeRow('products', r)));
 }));
 
 app.post('/api/public/orders', ah(async (req, res) => {
-  const body = deserializeBody('orders', req.body || {});
+  const body = await pickColumns('orders', deserializeBody('orders', req.body || {}));
+  delete body.status;
   const id = uuidv4();
   const cols = Object.keys(body);
   const allCols = ['id', ...cols, 'status', 'created_date', 'updated_date'];
