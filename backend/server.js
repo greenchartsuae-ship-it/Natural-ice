@@ -90,6 +90,8 @@ function requireAdmin(req, res, next) {
 app.post('/api/auth/register', ah(async (req, res) => {
   const { email, password, full_name } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return res.status(400).json({ error: 'invalid email' });
+  if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
   const existing = await db.get('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
   if (existing) return res.status(409).json({ error: 'user already exists' });
   const hash = bcrypt.hashSync(password, 10);
