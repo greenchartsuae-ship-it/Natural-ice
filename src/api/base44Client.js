@@ -4,12 +4,35 @@
 
 const API_BASE = '/api';
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// The free server may be asleep and answer the first request with a gateway
+// error (502/503/504) or drop it. Retry those a few times before giving up.
+async function fetchWithRetry(url, init, retries) {
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, init);
+      if ([502, 503, 504].includes(res.status) && i < retries) {
+        await sleep(4000);
+        continue;
+      }
+      return res;
+    } catch (e) {
+      lastErr = e;
+      if (i < retries) await sleep(4000);
+    }
+  }
+  throw lastErr;
+}
+
 async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const isOrderPost = path === '/public/orders' && options.method === 'POST';
+  const res = await fetchWithRetry(`${API_BASE}${path}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
-  });
+  }, isOrderPost ? 4 : 0);
   if (!res.ok) {
     let data = null;
     try { data = await res.json(); } catch (e) { /* ignore */ }
