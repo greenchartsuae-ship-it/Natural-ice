@@ -47,7 +47,7 @@ export default function Login() {
         await checkUserAuth();
         toast.success(`Welcome back, ${user.display_name || user.email}!`);
       }
-      redirectBasedOnRole(user);
+      if (mode === 'signup' && !params.get('return')) navigate('/order'); else redirectBasedOnRole(user);
     } catch (err) {
       toast.error(err.data?.error === 'user already exists' ? 'An account with this email already exists. Please sign in.' : (err.data?.error || (mode === 'signup' ? 'Could not create account' : 'Invalid email or password')));
     } finally {
@@ -101,9 +101,10 @@ export default function Login() {
               </div>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Please wait...' : (mode === 'signup' ? 'Sign up' : 'Sign in')}
+              {loading ? (mode === 'signup' ? 'Creating your account...' : 'Signing in...') : (mode === 'signup' ? 'Sign up' : 'Sign in')}
             </Button>
           </form>
+          {loading && <p className="text-xs text-center text-muted-foreground mt-2">Please wait, the server may take up to a minute to wake up. Do not close or click again.</p>}
           <Button variant="link" className="w-full mt-2" onClick={() => setMode(mode === 'signup' ? 'login' : 'signup')}>
             {mode === 'signup' ? 'Already have an account? Sign in' : 'New customer? Create an account'}
           </Button>
