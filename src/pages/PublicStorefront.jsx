@@ -199,7 +199,7 @@ export default function PublicStorefront() {
       delivery_address: checkoutData.delivery_address,
       delivery_phone: checkoutData.delivery_phone,
       notes: checkoutData.notes,
-      delivery_date: checkoutData.delivery_date,
+      delivery_date: checkoutData.delivery_date || null,
       ...(deliveryCoords ? { delivery_lat: deliveryCoords.lat, delivery_lng: deliveryCoords.lng } : {}),
     });
   };
@@ -740,7 +740,7 @@ export default function PublicStorefront() {
                 <Button variant="outline" onClick={() => setCheckoutOpen(false)}>Cancel</Button>
                 <Button
                   onClick={() => setCheckoutStep(2)}
-                  disabled={!checkoutData.client_name || !checkoutData.client_email || !checkoutData.delivery_address || !checkoutData.delivery_phone || !checkoutData.delivery_date}
+                  disabled={!checkoutData.client_name || !checkoutData.client_email || !checkoutData.delivery_address || !checkoutData.delivery_phone}
                   className="gap-2"
                 >
                   Next: Payment <ChevronRight className="w-4 h-4" />
