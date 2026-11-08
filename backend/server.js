@@ -88,17 +88,18 @@ function requireAdmin(req, res, next) {
 // ---------- Auth routes ----------
 
 app.post('/api/auth/register', ah(async (req, res) => {
-  const { email, password, full_name } = req.body;
+  const { email, password, full_name, phone, company_name } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+  if (!phone || String(phone).replace(/[^0-9]/g, '').length < 7) return res.status(400).json({ error: 'A valid phone number is required' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return res.status(400).json({ error: 'invalid email' });
   if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
   const existing = await db.get('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
   if (existing) return res.status(409).json({ error: 'user already exists' });
   const hash = bcrypt.hashSync(password, 10);
   const id = uuidv4();
-  await db.run(`INSERT INTO users (id, email, password_hash, full_name, display_name, role, created_date, updated_date)
-    VALUES (?, ?, ?, ?, ?, 'client', ?, ?)`,
-    [id, email.toLowerCase(), hash, full_name || '', full_name || '', now(), now()]);
+  await db.run(`INSERT INTO users (id, email, password_hash, full_name, display_name, phone, company_name, role, created_date, updated_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'client', ?, ?)`,
+    [id, email.toLowerCase(), hash, full_name || '', full_name || '', String(phone).slice(0, 30), String(company_name || '').slice(0, 120), now(), now()]);
   const user = await db.get('SELECT * FROM users WHERE id = ?', [id]);
   const token = sign(user);
   res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 3600 * 1000 });

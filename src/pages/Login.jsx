@@ -13,6 +13,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [phone, setPhone] = useState('');
+  const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -37,7 +39,7 @@ export default function Login() {
       if (mode === 'signup') {
         if (password.length < 8) throw { data: { error: 'Password must be at least 8 characters' } };
         if (password !== confirm) throw { data: { error: 'Passwords do not match' } };
-        user = await base44.auth.register(email.trim(), password, fullName.trim());
+        user = await base44.auth.register(email.trim(), password, fullName.trim(), phone.trim(), company.trim());
         await checkUserAuth();
         toast.success(`Welcome to Natural Ice, ${user.display_name || user.email}!`);
       } else {
@@ -71,6 +73,18 @@ export default function Login() {
                 <Label>Full name</Label>
                 <Input value={fullName} onChange={e => setFullName(e.target.value)} required placeholder="Your name" />
               </div>
+            )}
+            {mode === 'signup' && (
+              <>
+                <div>
+                  <Label>Phone number</Label>
+                  <Input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+971 5X XXX XXXX" />
+                </div>
+                <div>
+                  <Label>Company name <span className="text-slate-400 font-normal">(optional)</span></Label>
+                  <Input value={company} onChange={e => setCompany(e.target.value)} placeholder="Your company" />
+                </div>
+              </>
             )}
             <div>
               <Label>Email</Label>

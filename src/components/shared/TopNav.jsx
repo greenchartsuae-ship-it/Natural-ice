@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Home as HomeIcon, ShoppingBag, Truck, LogIn, BriefcaseBusiness } from 'lucide-react';
+import { Home as HomeIcon, ShoppingBag, Truck, LogIn, UserPlus, BriefcaseBusiness } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const links = [
@@ -47,6 +47,13 @@ export default function TopNav() {
       >
         <LogIn className="w-4 h-4" />
         Login
+      </button>
+      <button
+        onClick={() => { window.location.href = '/login?mode=signup'; }}
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[#1D71B8] text-white hover:bg-[#165a94]"
+      >
+        <UserPlus className="w-4 h-4" />
+        Sign up
       </button>
     </div>
   );

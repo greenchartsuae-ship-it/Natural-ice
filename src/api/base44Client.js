@@ -56,7 +56,7 @@ export const base44 = {
     me: () => request('/auth/me'),
     updateMe: (data) => request('/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
     login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-    register: (email, password, full_name) => request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, full_name }) }),
+    register: (email, password, full_name, phone, company_name) => request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, full_name, phone, company_name }) }),
     logout: async (redirectTo = '/') => {
       try { await request('/auth/logout', { method: 'POST' }); } catch (e) { /* ignore */ }
       window.location.href = redirectTo;
