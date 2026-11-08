@@ -144,7 +144,7 @@ export default function PublicStorefront() {
   };
 
   const createOrderMutation = useMutation({
-    mutationFn: (orderData) => base44.entities.Order.create(orderData),
+    mutationFn: (orderData) => base44.public.createOrder(orderData),
     onSuccess: (createdOrder) => {
       trackEvent('purchase', {
         transaction_id: createdOrder?.id || ('guest-' + Date.now()),
