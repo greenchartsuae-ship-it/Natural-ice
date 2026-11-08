@@ -43,7 +43,7 @@ export default function PublicStorefront() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = details, 2 = payment
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [checkoutData, setCheckoutData] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('naturalice_guest') || '{}');
@@ -198,7 +198,7 @@ export default function PublicStorefront() {
       total_amount: grandTotal,
       delivery_address: checkoutData.delivery_address,
       delivery_phone: checkoutData.delivery_phone,
-      notes: checkoutData.notes,
+      notes: `Payment: ${paymentMethod === 'card_on_delivery' ? 'Card on Delivery' : 'Cash on Delivery'}${checkoutData.notes ? ' | ' + checkoutData.notes : ''}`,
       delivery_date: checkoutData.delivery_date || null,
       ...(deliveryCoords ? { delivery_lat: deliveryCoords.lat, delivery_lng: deliveryCoords.lng } : {}),
     });
@@ -660,77 +660,51 @@ export default function PublicStorefront() {
 
               {/* Payment method selection */}
               <div className="space-y-3">
-                {/* Card */}
                 <button
-                  onClick={() => setPaymentMethod('card')}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${paymentMethod === 'cash' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
                 >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${paymentMethod === 'card' ? 'border-primary' : 'border-muted-foreground'}`}>
-                    {paymentMethod === 'card' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${paymentMethod === 'cash' ? 'border-primary' : 'border-muted-foreground'}`}>
+                    {paymentMethod === 'cash' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-sm">Pay by Card</p>
-                    <p className="text-xs text-muted-foreground">Visa / Mastercard</p>
+                    <p className="font-semibold text-sm">Cash on Delivery</p>
+                    <p className="text-xs text-muted-foreground">Pay in cash when your order arrives</p>
                   </div>
-                  <div className="flex gap-1 items-center">
-                    <div className="bg-blue-700 text-white text-xs font-bold px-2 py-0.5 rounded">VISA</div>
-                    <div className="flex">
-                      <div className="w-6 h-6 rounded-full bg-red-500 opacity-90" />
-                      <div className="w-6 h-6 rounded-full bg-yellow-400 -ml-3 opacity-90" />
-                    </div>
-                  </div>
+                  <span className="text-lg">💵</span>
                 </button>
-
-                {/* Apple Pay */}
                 <button
-                  onClick={() => setPaymentMethod('apple_pay')}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${paymentMethod === 'apple_pay' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
+                  onClick={() => setPaymentMethod('card_on_delivery')}
+                  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${paymentMethod === 'card_on_delivery' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
                 >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${paymentMethod === 'apple_pay' ? 'border-primary' : 'border-muted-foreground'}`}>
-                    {paymentMethod === 'apple_pay' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${paymentMethod === 'card_on_delivery' ? 'border-primary' : 'border-muted-foreground'}`}>
+                    {paymentMethod === 'card_on_delivery' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                   </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">Card on Delivery</p>
+                    <p className="text-xs text-muted-foreground">Pay by card with our driver</p>
+                  </div>
+                  <span className="text-lg">💳</span>
+                </button>
+                <p className="text-xs text-muted-foreground pt-1">Online payment — coming soon</p>
+                <div className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-border opacity-50 cursor-not-allowed select-none">
+                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">Pay by Card (Online)</p>
+                    <p className="text-xs text-muted-foreground">Visa / Mastercard — not available yet</p>
+                  </div>
+                  <div className="bg-blue-700 text-white text-xs font-bold px-2 py-0.5 rounded">VISA</div>
+                </div>
+                <div className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-border opacity-50 cursor-not-allowed select-none">
+                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground flex-shrink-0" />
                   <div className="flex-1">
                     <p className="font-semibold text-sm">Apple Pay</p>
-                    <p className="text-xs text-muted-foreground">Pay with Touch ID or Face ID</p>
+                    <p className="text-xs text-muted-foreground">Not available yet</p>
                   </div>
-                  <div className="bg-black text-white text-xs font-semibold px-3 py-1 rounded-md" style={{fontFamily: '-apple-system, sans-serif'}}> Pay</div>
-                </button>
+                  <div className="bg-black text-white text-xs font-semibold px-3 py-1 rounded-md"> Pay</div>
+                </div>
               </div>
-
-              {/* Card form placeholder */}
-              {paymentMethod === 'card' && (
-                <div className="border rounded-xl p-4 space-y-3 bg-muted/30">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                    <CreditCard className="w-4 h-4" />
-                    <span>Card details</span>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Card Number</Label>
-                    <div className="h-9 rounded-md border border-input bg-background px-3 flex items-center text-sm text-muted-foreground">•••• •••• •••• ••••</div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs">Expiry</Label>
-                      <div className="h-9 rounded-md border border-input bg-background px-3 flex items-center text-sm text-muted-foreground">MM / YY</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs">CVV</Label>
-                      <div className="h-9 rounded-md border border-input bg-background px-3 flex items-center text-sm text-muted-foreground">•••</div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-amber-600 text-center">⚡ Payment integration coming soon — orders will be confirmed manually.</p>
-                </div>
-              )}
-
-              {/* Apple Pay placeholder */}
-              {paymentMethod === 'apple_pay' && (
-                <div className="border rounded-xl p-4 flex flex-col items-center gap-3 bg-muted/30">
-                  <div className="w-full h-12 bg-black rounded-lg flex items-center justify-center">
-                    <span className="text-white font-semibold text-base" style={{fontFamily: '-apple-system, sans-serif'}}> Pay</span>
-                  </div>
-                  <p className="text-xs text-amber-600 text-center">⚡ Apple Pay integration coming soon — orders will be confirmed manually.</p>
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground text-center">Your order will be confirmed by our team. You pay on delivery.</p>
             </div>
           )}
 
